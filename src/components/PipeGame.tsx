@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Select, SelectOption } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
@@ -54,7 +54,7 @@ export default function PipeGame() {
       newBoard[row] = [...prevBoard[row]];
       newBoard[row][col] = {
         ...prevBoard[row][col],
-        rotation: (prevBoard[row][col].rotation + 90) % 360,
+        rotation: prevBoard[row][col].rotation + 90,
       };
       return newBoard;
     });
@@ -66,7 +66,7 @@ export default function PipeGame() {
   };
 
   // Initialize board on first render
-  React.useEffect(() => {
+  useEffect(() => {
     initializeBoard(boardSize);
   }, [boardSize, initializeBoard]);
 
