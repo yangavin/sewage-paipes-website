@@ -1,47 +1,3 @@
-export class PlayableBoard {
-  n: number;
-  state: Array<Array<boolean>>;
-  initialState: Array<Array<boolean>>;
-  solution: Array<Array<boolean>>;
-
-  constructor(solution_encoding: string) {
-    this.n = Math.sqrt(solution_encoding.length / 4);
-
-    // Decoding the solution into array
-    const res: Array<Array<boolean>> = [];
-    for (let i = 0; i < solution_encoding.length; i += 4) {
-      const pipe: Array<boolean> = [];
-      for (let j = 0; j < 4; j++) {
-        pipe.push(solution_encoding[i + j] === "1");
-      }
-      res.push(pipe);
-    }
-    this.solution = res;
-
-    // Initialize state with a copy of the solution
-    this.state = res.map((pipe) => [...pipe]);
-
-    // Scrambling solution by randomly rotating each pipe
-    for (let i = 0; i < this.state.length; i++) {
-      const numTurns = Math.floor(Math.random() * 4); // Random number between 0 and 3
-      for (let t = 0; t < numTurns; t++) {
-        this.turn(i);
-      }
-    }
-
-    this.initialState = this.state.map((pipe) => [...pipe]);
-  }
-
-  public turn(index: number): void {
-    this.state[index] = [
-      this.state[index][3],
-      this.state[index][0],
-      this.state[index][1],
-      this.state[index][2],
-    ];
-  }
-}
-
 export class EditableBoard {
   n: number;
   state: Array<Array<boolean> | null>;
@@ -118,9 +74,9 @@ export function getPipeOrientation(arr: Array<boolean>): number {
 
   if (type === "2") {
     if (arr[0]) {
-      return 0;
-    } else {
       return 1;
+    } else {
+      return 0;
     }
   }
 

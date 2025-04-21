@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
-import { PlayableBoard, getPipeType, getPipeOrientation } from "@/utils/Pipes";
-import { useState } from "react";
+import {
+  getPipeType,
+  getPipeOrientation as getPipeRotations,
+} from "@/utils/Pipes";
+import { useState, useEffect } from "react";
 
 const fetcher = (n: number): (() => Promise<Array<string>>) => {
   return () => fetch(`/${n}.json`).then((res) => res.json());
@@ -9,45 +12,84 @@ const fetcher = (n: number): (() => Promise<Array<string>>) => {
 
 export default function GameBoard({ n }: { n: number }) {
   const { data: solutions } = useSWR<Array<string>>(String(n), fetcher(n));
-  const [board, setBoard] = useState<PlayableBoard | null>(null);
+
+  // State for board management
+  const [currentState, setCurrentState] = useState<Array<Array<boolean>>>([]);
+  const [initialState, setInitialState] = useState<Array<Array<boolean>>>([]);
+  const [solution, setSolution] = useState<Array<Array<boolean>>>([]);
   const [rotationCounts, setRotationCounts] = useState<number[]>([]);
 
-  if (!solutions) return null;
+  // Initialize board when solutions are available
+  useEffect(() => {
+    if (solutions && solutions.length > 0) {
+      const randomSolution =
+        solutions[Math.floor(Math.random() * solutions.length)];
 
-  // Initialize board if solutions are available and board is null
-  if (!board && solutions.length > 0) {
-    const randomSolution =
-      solutions[Math.floor(Math.random() * solutions.length)];
-    const newBoard = new PlayableBoard(randomSolution);
-    setBoard(newBoard);
-    // Initialize rotation counts based on getPipeOrientation
-    const initialRotations = newBoard.state.map((pipe) =>
-      getPipeOrientation(pipe)
-    );
-    setRotationCounts(initialRotations);
-    return null;
-  }
+      // Decode solution string into array of boolean arrays
+      const decodedSolution: Array<Array<boolean>> = [];
+      for (let i = 0; i < randomSolution.length; i += 4) {
+        const pipe: Array<boolean> = [];
+        for (let j = 0; j < 4; j++) {
+          pipe.push(randomSolution[i + j] === "1");
+        }
+        decodedSolution.push(pipe);
+      }
 
-  if (!board) return null;
+      // Create initial state by randomly rotating pipes
+      const scrambledState = decodedSolution.map((pipe) => {
+        const numTurns = Math.floor(Math.random() * 4);
+        let rotatedPipe = [...pipe];
+        for (let t = 0; t < numTurns; t++) {
+          rotatedPipe = [
+            rotatedPipe[3],
+            rotatedPipe[0],
+            rotatedPipe[1],
+            rotatedPipe[2],
+          ];
+        }
+        return rotatedPipe;
+      });
+
+      setSolution(decodedSolution);
+      setCurrentState(scrambledState);
+      setInitialState(scrambledState);
+      setRotationCounts(scrambledState.map((pipe) => getPipeRotations(pipe)));
+    }
+  }, [solutions]);
+
+  if (!solutions || currentState.length === 0) return null;
 
   const handlePipeClick = (index: number) => {
-    const newBoard = new PlayableBoard(
-      solutions[Math.floor(Math.random() * solutions.length)]
-    );
-    newBoard.state = [...board.state];
-    newBoard.turn(index);
-    setBoard(newBoard);
+    const newState = [...currentState];
+    // Rotate the pipe at index
+    newState[index] = [
+      currentState[index][3],
+      currentState[index][0],
+      currentState[index][1],
+      currentState[index][2],
+    ];
+    setCurrentState(newState);
 
-    // Update rotation count for the clicked pipe
+    // Update rotation count
     const newRotationCounts = [...rotationCounts];
     newRotationCounts[index] = rotationCounts[index] + 1;
     setRotationCounts(newRotationCounts);
   };
 
+  const handleReset = () => {
+    setCurrentState(initialState);
+    setRotationCounts(initialState.map((pipe) => getPipeRotations(pipe)));
+  };
+
+  const handleShowSolution = () => {
+    setCurrentState(solution);
+    setRotationCounts(solution.map((pipe) => getPipeRotations(pipe)));
+  };
+
   return (
     <div>
-      <Button>See Solution</Button>
-      <Button>Reset</Button>
+      <Button onClick={handleShowSolution}>See Solution</Button>
+      <Button onClick={handleReset}>Reset</Button>
       <div
         className="grid w-1/2 aspect-square mx-auto my-4"
         style={{
@@ -62,7 +104,7 @@ export default function GameBoard({ n }: { n: number }) {
             onClick={() => handlePipeClick(index)}
           >
             <img
-              src={`/type${getPipeType(board.state[index])}.svg`}
+              src={`/type${getPipeType(currentState[index])}.svg`}
               className="w-full h-full transition-transform duration-200"
               style={{
                 transform: `rotate(${rotationCounts[index] * 90}deg)`,
