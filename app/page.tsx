@@ -1,5 +1,3 @@
-"use client";
-
 import PlayableBoard from "./PlayableBoard";
 
 export default function Home() {

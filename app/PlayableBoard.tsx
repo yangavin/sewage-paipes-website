@@ -1,5 +1,6 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
-import useSWR from "swr";
 import {
   getPipeType,
   getPipeOrientation as getPipeRotations,
@@ -13,17 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const fetcher = (n: number): (() => Promise<Array<string>>) => {
-  return () => fetch(`/${n}.json`).then((res) => res.json());
-};
+import { generatePipesState } from "./utils/pyodideUtils";
 
 export default function PlayableBoard() {
   const [n, setN] = useState<number>(4);
-  const { data: solutions, isLoading } = useSWR<Array<string>>(
-    String(n),
-    fetcher(n)
-  );
+  const [solution_str, setSolutionStr] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // State for board management
   const [currentState, setCurrentState] = useState<Array<Array<boolean>>>([]);
@@ -31,20 +27,30 @@ export default function PlayableBoard() {
   const [solution, setSolution] = useState<Array<Array<boolean>>>([]);
   const [rotationCounts, setRotationCounts] = useState<number[]>([]);
 
-  const initializeNewPuzzle = (solutions: string[]) => {
-    const randomSolution =
-      solutions[Math.floor(Math.random() * solutions.length)];
+  // Function to fetch new puzzle
+  const fetchNewPuzzle = async () => {
+    setIsLoading(true);
+    try {
+      const newSolution = await generatePipesState(n);
+      setSolutionStr(newSolution);
+    } catch (error) {
+      console.error("Error generating puzzle:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  const initializeNewPuzzle = (solution_str: string) => {
     // Decode solution string into array of boolean arrays
     const decodedSolution: Array<Array<boolean>> = [];
-    for (let i = 0; i < randomSolution.length; i += 4) {
+    for (let i = 0; i < solution_str.length; i += 4) {
       const pipe: Array<boolean> = [];
       for (let j = 0; j < 4; j++) {
-        pipe.push(randomSolution[i + j] === "1");
+        pipe.push(solution_str[i + j] === "1");
       }
       decodedSolution.push(pipe);
     }
-
+    console.log(decodedSolution);
     // Create initial state by randomly rotating pipes
     const scrambledState = decodedSolution.map((pipe) => {
       const numTurns = Math.floor(Math.random() * 4);
@@ -66,29 +72,21 @@ export default function PlayableBoard() {
     setRotationCounts(scrambledState.map((pipe) => getPipeRotations(pipe)));
   };
 
-  // Clear state when n changes
+  // Initialize board when n changes
   useEffect(() => {
     setCurrentState([]);
     setInitialState([]);
     setSolution([]);
     setRotationCounts([]);
+    fetchNewPuzzle();
   }, [n]);
 
   // Initialize board when solutions are available
   useEffect(() => {
-    if (solutions && solutions.length > 0) {
-      initializeNewPuzzle(solutions);
+    if (solution_str && solution_str.length > 0) {
+      initializeNewPuzzle(solution_str);
     }
-  }, [solutions, n]);
-
-  // Show loading state while fetching new data
-  if (isLoading || !solutions || currentState.length !== n * n) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
+  }, [solution_str]);
 
   const handlePipeClick = (index: number) => {
     const newState = [...currentState];
@@ -118,9 +116,7 @@ export default function PlayableBoard() {
   };
 
   const handleNewPuzzle = () => {
-    if (solutions) {
-      initializeNewPuzzle(solutions);
-    }
+    fetchNewPuzzle();
   };
 
   return (
@@ -135,7 +131,7 @@ export default function PlayableBoard() {
             <SelectValue placeholder="Select a number" />
           </SelectTrigger>
           <SelectContent className="max-h-[200px]">
-            {Array.from({ length: 24 }, (_, i) => (
+            {Array.from({ length: 9 }, (_, i) => (
               <SelectItem key={i} value={`${i + 2}`}>
                 {`${i + 2}x${i + 2}`}
               </SelectItem>
@@ -144,42 +140,56 @@ export default function PlayableBoard() {
         </Select>
       </div>
       <div className="flex gap-4 justify-center mb-6">
-        <Button variant="outline" onClick={handleNewPuzzle}>
+        <Button
+          variant="outline"
+          onClick={handleNewPuzzle}
+          disabled={isLoading}
+        >
           New Puzzle
         </Button>
-        <Button variant="outline" onClick={handleReset}>
+        <Button variant="outline" onClick={handleReset} disabled={isLoading}>
           Reset
         </Button>
-        <Button variant="outline" onClick={handleShowSolution}>
+        <Button
+          variant="outline"
+          onClick={handleShowSolution}
+          disabled={isLoading}
+        >
           See Solution
         </Button>
       </div>
-      <div
-        className="grid w-1/2 aspect-square mx-auto my-4"
-        style={{
-          gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`,
-        }}
-      >
-        {Array.from({ length: n * n }).map((_, index) => (
-          <div
-            key={index}
-            className="border border-gray-300 bg-white cursor-pointer"
-            onClick={() => handlePipeClick(index)}
-          >
-            <Image
-              src={`/type${getPipeType(currentState[index])}.svg`}
-              className="w-full h-full transition-transform duration-200"
-              style={{
-                transform: `rotate(${rotationCounts[index] * 90}deg)`,
-              }}
-              alt={`Pipe type ${getPipeType(currentState[index])}`}
-              width={100}
-              height={100}
-            />
-          </div>
-        ))}
-      </div>
+      {isLoading || !solution_str || currentState.length !== n * n ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      ) : (
+        <div
+          className="grid w-1/2 aspect-square mx-auto my-4"
+          style={{
+            gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`,
+          }}
+        >
+          {Array.from({ length: n * n }).map((_, index) => (
+            <div
+              key={index}
+              className="border border-gray-300 bg-white cursor-pointer"
+              onClick={() => handlePipeClick(index)}
+            >
+              <Image
+                src={`/type${getPipeType(currentState[index])}.svg`}
+                className="w-full h-full transition-transform duration-200"
+                style={{
+                  transform: `rotate(${rotationCounts[index] * 90}deg)`,
+                }}
+                alt={`Pipe type ${getPipeType(currentState[index])}`}
+                width={100}
+                height={100}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
