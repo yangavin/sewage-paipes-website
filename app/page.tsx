@@ -1,6 +1,6 @@
 "use client";
 
-import Playground from "./Playground";
+import PlayableBoard from "./PlayableBoard";
 
 export default function Home() {
   return (
@@ -8,7 +8,7 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center gap-4">
         <h1 className="text-4xl font-bold my-8 text-center">Sewage pAIpes</h1>
       </div>
-      <Playground />
+      <PlayableBoard />
     </>
   );
 }
