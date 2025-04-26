@@ -5,6 +5,7 @@ import {
   getPipeType,
   getPipeOrientation as getPipeRotations,
 } from "@/utils/Pipes";
+import { generateSolution } from "@/utils/csp/main";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
@@ -14,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { generatePipesState } from "./utils/pyodideUtils";
 
 export default function PlayableBoard() {
   const [n, setN] = useState<number>(4);
@@ -23,25 +23,33 @@ export default function PlayableBoard() {
 
   // State for board management
   const [currentState, setCurrentState] = useState<Array<Array<boolean>>>([]);
-  const [initialState, setInitialState] = useState<Array<Array<boolean>>>([]);
-  const [solution, setSolution] = useState<Array<Array<boolean>>>([]);
   const [rotationCounts, setRotationCounts] = useState<number[]>([]);
+  const [solution, setSolution] = useState<Array<Array<boolean>>>([]);
+  const [initialState, setInitialState] = useState<Array<Array<boolean>>>([]);
 
-  // Function to fetch new puzzle
-  const fetchNewPuzzle = async () => {
-    setIsLoading(true);
-    try {
-      const newSolution = await generatePipesState(n);
-      setSolutionStr(newSolution);
-    } catch (error) {
-      console.error("Error generating puzzle:", error);
-    } finally {
+  // Initial load and when n changes
+  useEffect(() => {
+    const fetchSolution = async () => {
+      setIsLoading(true);
+      try {
+        const newSolution = await generateSolution(n);
+        setSolutionStr(newSolution);
+      } catch (error) {
+        console.error("Error generating solution:", error);
+      }
+    };
+
+    fetchSolution();
+  }, [n]);
+
+  // Process the solution string whenever it changes
+  useEffect(() => {
+    if (!solution_str || solution_str === "No solution found") {
       setIsLoading(false);
+      return;
     }
-  };
 
-  const initializeNewPuzzle = (solution_str: string) => {
-    // Decode solution string into array of boolean arrays
+    // Decode the solution
     const decodedSolution: Array<Array<boolean>> = [];
     for (let i = 0; i < solution_str.length; i += 4) {
       const pipe: Array<boolean> = [];
@@ -50,7 +58,7 @@ export default function PlayableBoard() {
       }
       decodedSolution.push(pipe);
     }
-    console.log(decodedSolution);
+
     // Create initial state by randomly rotating pipes
     const scrambledState = decodedSolution.map((pipe) => {
       const numTurns = Math.floor(Math.random() * 4);
@@ -67,25 +75,10 @@ export default function PlayableBoard() {
     });
 
     setSolution(decodedSolution);
-    setCurrentState(scrambledState);
     setInitialState(scrambledState);
+    setCurrentState(scrambledState);
     setRotationCounts(scrambledState.map((pipe) => getPipeRotations(pipe)));
-  };
-
-  // Initialize board when n changes
-  useEffect(() => {
-    setCurrentState([]);
-    setInitialState([]);
-    setSolution([]);
-    setRotationCounts([]);
-    fetchNewPuzzle();
-  }, [n]);
-
-  // Initialize board when solutions are available
-  useEffect(() => {
-    if (solution_str && solution_str.length > 0) {
-      initializeNewPuzzle(solution_str);
-    }
+    setIsLoading(false);
   }, [solution_str]);
 
   const handlePipeClick = (index: number) => {
@@ -101,7 +94,7 @@ export default function PlayableBoard() {
 
     // Update rotation count
     const newRotationCounts = [...rotationCounts];
-    newRotationCounts[index] = rotationCounts[index] + 1;
+    newRotationCounts[index] = (rotationCounts[index] + 1) % 4;
     setRotationCounts(newRotationCounts);
   };
 
@@ -115,8 +108,15 @@ export default function PlayableBoard() {
     setRotationCounts(solution.map((pipe) => getPipeRotations(pipe)));
   };
 
-  const handleNewPuzzle = () => {
-    fetchNewPuzzle();
+  const handleNewPuzzle = async () => {
+    setIsLoading(true);
+    try {
+      const newSolution = await generateSolution(n);
+      setSolutionStr(newSolution);
+    } catch (error) {
+      console.error("Error generating new puzzle:", error);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -158,9 +158,13 @@ export default function PlayableBoard() {
           See Solution
         </Button>
       </div>
-      {isLoading || !solution_str || currentState.length !== n * n ? (
+      {isLoading ? (
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      ) : !solution_str || currentState.length !== n * n ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <p>No valid solution found. Try a different board size.</p>
         </div>
       ) : (
         <div
