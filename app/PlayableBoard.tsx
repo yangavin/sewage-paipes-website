@@ -131,7 +131,7 @@ export default function PlayableBoard() {
             <SelectValue placeholder="Select a number" />
           </SelectTrigger>
           <SelectContent className="max-h-[200px]">
-            {Array.from({ length: 9 }, (_, i) => (
+            {Array.from({ length: 24 }, (_, i) => (
               <SelectItem key={i} value={`${i + 2}`}>
                 {`${i + 2}x${i + 2}`}
               </SelectItem>

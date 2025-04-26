@@ -18,6 +18,10 @@ export async function initPyodide() {
   // @ts-expect-error Pyodide is loaded from CDN
   pyodide = await loadPyodide();
 
+  if (!pyodide) {
+    throw new Error("Failed to initialize Pyodide");
+  }
+
   // Create constraints directory
   await pyodide.runPythonAsync(`
 import os

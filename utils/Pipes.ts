@@ -1,29 +1,3 @@
-export class EditableBoard {
-  n: number;
-  state: Array<Array<boolean> | null>;
-
-  constructor(n: number) {
-    this.n = n;
-    // Create a array of size n^2 with all null values
-    this.state = Array.from({ length: n * n }, () => null);
-  }
-
-  public turn(index: number): void {
-    if (this.state[index] !== null) {
-      this.state[index] = [
-        this.state[index][3],
-        this.state[index][0],
-        this.state[index][1],
-        this.state[index][2],
-      ];
-    }
-  }
-
-  public assign(index: number, pipe: Array<boolean> | null): void {
-    this.state[index] = pipe;
-  }
-}
-
 export function getPipeType(boolArray: Array<boolean>): string {
   // Count the number of true values
   const trueCount = boolArray.filter((value) => value === true).length;
