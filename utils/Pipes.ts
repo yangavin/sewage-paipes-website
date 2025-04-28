@@ -36,45 +36,45 @@ export function getPipeOrientation(arr: Array<boolean>): number {
   const type = getPipeType(arr);
   if (type === "1") {
     if (arr[0]) {
-      return 1;
-    } else if (arr[1]) {
-      return 2;
-    } else if (arr[2]) {
-      return 3;
-    } else if (arr[3]) {
       return 0;
+    } else if (arr[1]) {
+      return 1;
+    } else if (arr[2]) {
+      return 2;
+    } else if (arr[3]) {
+      return 3;
     }
   }
 
   if (type === "2") {
     if (arr[0]) {
-      return 1;
-    } else {
       return 0;
+    } else {
+      return 1;
     }
   }
 
   if (type === "3") {
     if (arr[0] && arr[1]) {
-      return 3;
-    } else if (arr[1] && arr[2]) {
       return 0;
-    } else if (arr[2] && arr[3]) {
+    } else if (arr[1] && arr[2]) {
       return 1;
-    } else if (arr[3] && arr[0]) {
+    } else if (arr[2] && arr[3]) {
       return 2;
+    } else if (arr[3] && arr[0]) {
+      return 3;
     }
   }
 
   if (type === "4") {
     if (!arr[0]) {
-      return 0;
-    } else if (!arr[1]) {
-      return 1;
-    } else if (!arr[2]) {
       return 2;
-    } else {
+    } else if (!arr[1]) {
       return 3;
+    } else if (!arr[2]) {
+      return 0;
+    } else {
+      return 1;
     }
   }
 
