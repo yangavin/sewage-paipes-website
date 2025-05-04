@@ -80,3 +80,33 @@ export function getPipeOrientation(arr: Array<boolean>): number {
 
   throw new Error("My function is wrong I guess");
 }
+
+export function decodeStateStr(solutionStr: string): Array<Array<boolean>> {
+  const decodedSolution: Array<Array<boolean>> = [];
+  for (let i = 0; i < solutionStr.length; i += 4) {
+    const pipe: Array<boolean> = [];
+    for (let j = 0; j < 4; j++) {
+      pipe.push(solutionStr[i + j] === "1");
+    }
+    decodedSolution.push(pipe);
+  }
+  return decodedSolution;
+}
+
+export function scrambleState(
+  solution: Array<Array<boolean>>
+): Array<Array<boolean>> {
+  return solution.map((pipe) => {
+    const numTurns = Math.floor(Math.random() * 4);
+    let rotatedPipe = [...pipe];
+    for (let t = 0; t < numTurns; t++) {
+      rotatedPipe = [
+        rotatedPipe[3],
+        rotatedPipe[0],
+        rotatedPipe[1],
+        rotatedPipe[2],
+      ];
+    }
+    return rotatedPipe;
+  });
+}
