@@ -1,4 +1,4 @@
-import { PipeType } from "./utils";
+import { Openings } from "./utils";
 import {
   noHalfConnectionsValidatorH,
   noHalfConnectionsValidatorV,
@@ -29,10 +29,10 @@ export function generateDomain(
   right: boolean,
   bottom: boolean,
   left: boolean
-): PipeType[] {
+): Openings[] {
   // all the possible domains for pipes in the pipes puzzle
   // [true, true, true, true] and [false, false, false, false] are omitted - they represent all connections or no connections, which are immune to rotations.
-  let domain: PipeType[] = [
+  let domain: Openings[] = [
     [true, true, true, false],
     [true, true, false, true],
     [true, true, false, false],

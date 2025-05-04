@@ -4,20 +4,18 @@ import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useState } from "react";
 import DroppableBox from "./DroppableBox";
 import DraggablePipe from "./DraggablePipe";
-import { PipeType } from "@/utils/csp/utils";
-import { isSolved, pickMove } from "@/utils/Pipes";
+import { Openings } from "@/utils/csp/utils";
+import { getPipeRotation, isSolved, pickMove } from "@/utils/Pipes";
 
-const PIPES: PipeType[] = [
+const PIPES: Openings[] = [
   [true, false, false, false], // Type 1
   [true, false, true, false], // Type 2
   [true, true, false, false], // Type 3
   [true, true, false, true], // Type 4
 ];
-
 export interface PipeInstance {
-  id: string;
-  pipe: PipeType;
-  rotation: number;
+  openings: Openings;
+  rotations: number;
 }
 
 export default function BuildableBoard() {
@@ -39,14 +37,13 @@ export default function BuildableBoard() {
         const currentPipe = prevState[index];
         if (currentPipe === null) return newState;
         newState[index] = {
-          ...currentPipe,
-          pipe: [
-            currentPipe.pipe[3],
-            currentPipe.pipe[0],
-            currentPipe.pipe[1],
-            currentPipe.pipe[2],
+          openings: [
+            currentPipe.openings[3],
+            currentPipe.openings[0],
+            currentPipe.openings[1],
+            currentPipe.openings[2],
           ],
-          rotation: currentPipe.rotation + 1,
+          rotations: currentPipe.rotations + 1,
         };
         return newState;
       });
@@ -83,10 +80,6 @@ export default function BuildableBoard() {
 
   const noEmpties = boardState.every((pipe) => pipe !== null);
 
-  const generatePipeId = () => {
-    return Math.random().toString(36).substring(2, 9);
-  };
-
   const handleClearBoard = () => {
     setBoardState(Array(16).fill(null));
   };
@@ -99,21 +92,13 @@ export default function BuildableBoard() {
     });
   };
 
-  const handleReplacePipe = (
-    index: number,
-    pipeData: { pipe: PipeType; id?: string }
-  ) => {
+  const handleReplacePipe = (index: number, pipe: Openings) => {
     setBoardState((prevState) => {
       const newState = [...prevState];
-      // If an ID is provided, it means we're moving an existing pipe
-      const rotation = pipeData.id
-        ? prevState.find((p) => p?.id === pipeData.id)?.rotation || 0
-        : 0;
-
+      const rotations = getPipeRotation(pipe);
       newState[index] = {
-        id: generatePipeId(),
-        pipe: [...pipeData.pipe],
-        rotation,
+        openings: [...pipe],
+        rotations,
       };
       return newState;
     });
@@ -136,19 +121,17 @@ export default function BuildableBoard() {
       </div>
 
       <div className="flex w-1/5 mx-auto">
-        {[1, 2, 3, 4].map((pipeType) => {
+        {PIPES.map((openings, i) => {
           return (
             <div
-              key={pipeType}
+              key={i}
               className="border border-gray-300 bg-white cursor-pointer"
             >
               <DraggablePipe
-                id={`template-${pipeType}`}
-                pipe={PIPES[pipeType - 1]}
-                rotation={0}
+                pipe={[...openings]}
+                rotations={0}
                 onTurn={() => {}}
                 onDelete={() => {}}
-                isTemplate={true}
               />
             </div>
           );
@@ -164,19 +147,15 @@ export default function BuildableBoard() {
       >
         {boardState.map((pipeInstance, index) => (
           <DroppableBox
-            onDrop={(pipe: PipeType, id?: string) =>
-              handleReplacePipe(index, { pipe, id })
-            }
+            onDrop={(pipe: Openings) => handleReplacePipe(index, pipe)}
             key={index}
           >
             {pipeInstance && (
               <DraggablePipe
-                id={pipeInstance.id}
-                pipe={pipeInstance.pipe}
-                rotation={pipeInstance.rotation}
+                pipe={pipeInstance.openings}
+                rotations={pipeInstance.rotations}
                 onTurn={() => handlePipeTurn(index)}
                 onDelete={() => handleDeletePipe(index)}
-                isTemplate={false}
               />
             )}
           </DroppableBox>

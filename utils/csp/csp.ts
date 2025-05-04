@@ -1,20 +1,20 @@
 // Implementation of CSP with iterative algorithms for better performance
 
-import { PipeType, Assignment, findAdj, printPipesGrid } from "./utils";
+import { Openings, Assignment, findAdj, printPipesGrid } from "./utils";
 
-type Validator = (pipes: PipeType[]) => boolean;
-type Pruner = (scope: Variable[]) => Map<Variable, PipeType[]>;
+type Validator = (pipes: Openings[]) => boolean;
+type Pruner = (scope: Variable[]) => Map<Variable, Openings[]>;
 
 export class Variable {
   location: number;
-  domain: PipeType[];
-  activeDomain: PipeType[];
-  assignment: PipeType | null = null;
+  domain: Openings[];
+  activeDomain: Openings[];
+  assignment: Openings | null = null;
 
   constructor(
     location: number,
-    domain: PipeType[] = [],
-    assignment: PipeType | null = null
+    domain: Openings[] = [],
+    assignment: Openings | null = null
   ) {
     this.location = location;
     this.domain = domain;
@@ -24,15 +24,15 @@ export class Variable {
     }
   }
 
-  getActiveDomain(): PipeType[] {
+  getActiveDomain(): Openings[] {
     return [...this.activeDomain];
   }
 
-  getAssignment(): PipeType | null {
+  getAssignment(): Openings | null {
     return this.assignment;
   }
 
-  prune(toRemove: PipeType[]): void {
+  prune(toRemove: Openings[]): void {
     for (const p of toRemove) {
       const idx = this.activeDomain.findIndex((d) =>
         d.every((b, i) => b === p[i])
@@ -41,7 +41,7 @@ export class Variable {
     }
   }
 
-  assign(value: PipeType): boolean {
+  assign(value: Openings): boolean {
     if (!this.domain.some((d) => d.every((b, i) => b === value[i]))) {
       console.error("Attempted to assign variable to value not in domain");
       return false;
@@ -100,11 +100,11 @@ export class Constraint {
         "Tried to check if a constraint with unassigned variables was violated"
       );
     }
-    const pipes = this.scope.map((v) => v.getAssignment()!) as PipeType[];
+    const pipes = this.scope.map((v) => v.getAssignment()!) as Openings[];
     return !this.validator(pipes);
   }
 
-  prune(): Map<Variable, PipeType[]> {
+  prune(): Map<Variable, Openings[]> {
     return this.pruner(this.scope);
   }
 
@@ -117,8 +117,8 @@ export class Constraint {
 interface GacStackFrame {
   currVar: Variable;
   domainIndex: number;
-  active: PipeType[];
-  backup: Map<Variable, PipeType[]>;
+  active: Openings[];
+  backup: Map<Variable, Openings[]>;
 }
 
 export class CSP {
@@ -174,7 +174,7 @@ export class CSP {
     return [...(this.varsToCons.get(v) || [])];
   }
 
-  assignVar(v: Variable, val: PipeType): boolean {
+  assignVar(v: Variable, val: Openings): boolean {
     if (v.assign(val)) {
       this.unassignedVars = this.unassignedVars.filter((x) => x !== v);
       this.assignedVars.push(v);
@@ -205,8 +205,8 @@ export class CSP {
   }
 
   // Optimized implementation of ac3
-  ac3(queue: Constraint[]): Map<Variable, PipeType[]> {
-    const prunedAll = new Map<Variable, PipeType[]>();
+  ac3(queue: Constraint[]): Map<Variable, Openings[]> {
+    const prunedAll = new Map<Variable, Openings[]>();
     const queueCopy = [...queue]; // Create a copy to avoid modifying the original
 
     while (queueCopy.length > 0) {
@@ -246,8 +246,8 @@ export class CSP {
     interface SearchState {
       variable: Variable;
       domainIndex: number;
-      activeDomain: PipeType[];
-      pruned: Map<Variable, PipeType[]>;
+      activeDomain: Openings[];
+      pruned: Map<Variable, Openings[]>;
     }
 
     const stack: SearchState[] = [];
@@ -399,7 +399,7 @@ export class CSP {
 
   manhattanDistToConnection(randomizeOrder: boolean): Variable {
     const n = Math.sqrt(this.vars.length) | 0;
-    const locPipe = new Map<number, PipeType>();
+    const locPipe = new Map<number, Openings>();
     for (const v of this.assignedVars) {
       locPipe.set(v.location, v.getAssignment()!);
     }
@@ -413,7 +413,7 @@ export class CSP {
     const direct = new Set<number>();
     for (const [loc, pipe] of locPipe) {
       const [up, right, down, left] = findAdj(loc, n);
-      const neighbors: (PipeType | null)[] = [
+      const neighbors: (Openings | null)[] = [
         up >= 0 && locPipe.has(up) ? locPipe.get(up)! : null,
         right >= 0 && locPipe.has(right) ? locPipe.get(right)! : null,
         down >= 0 && locPipe.has(down) ? locPipe.get(down)! : null,

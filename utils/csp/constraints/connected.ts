@@ -1,13 +1,13 @@
-import { PipeType, findAdj, checkConnections } from "../utils";
+import { Openings, findAdj, checkConnections } from "../utils";
 import { Variable } from "../csp";
 
-export function validator(pipes: PipeType[]): boolean {
+export function validator(pipes: Openings[]): boolean {
   const visited: number[] = [];
   dft(pipes, 0, visited);
   return visited.length === pipes.length;
 }
 
-function dft(pipes: PipeType[], loc: number, visited: number[]): void {
+function dft(pipes: Openings[], loc: number, visited: number[]): void {
   visited.push(loc);
   const adjVals = findAdj(loc, Math.sqrt(pipes.length));
 
@@ -30,8 +30,8 @@ function dft(pipes: PipeType[], loc: number, visited: number[]): void {
   }
 }
 
-export function pruner(variables: Variable[]): Map<Variable, PipeType[]> {
-  const pruned = new Map<Variable, PipeType[]>();
+export function pruner(variables: Variable[]): Map<Variable, Openings[]> {
+  const pruned = new Map<Variable, Openings[]>();
   const pseudoAssignment = pseudoAssign(variables);
 
   const canBeConnected = validator(pseudoAssignment);
@@ -53,8 +53,8 @@ export function pruner(variables: Variable[]): Map<Variable, PipeType[]> {
   return pruned;
 }
 
-function pseudoAssign(variables: Variable[]): PipeType[] {
-  const pseudoAssignment: PipeType[] = [];
+function pseudoAssign(variables: Variable[]): Openings[] {
+  const pseudoAssignment: Openings[] = [];
 
   for (const v of variables) {
     const assignment = v.getAssignment();
@@ -77,7 +77,7 @@ function pseudoAssign(variables: Variable[]): PipeType[] {
         if (allTrue) break;
       }
 
-      pseudoAssignment.push(pseudoPipe as PipeType);
+      pseudoAssignment.push(pseudoPipe as Openings);
     }
   }
 
@@ -86,25 +86,25 @@ function pseudoAssign(variables: Variable[]): PipeType[] {
 
 function findIsolatedPath(
   variables: Variable[],
-  pseudoAssignment: PipeType[],
+  pseudoAssignment: Openings[],
   i: number,
   lastDir: number,
-  pruned: Map<Variable, PipeType[]>
+  pruned: Map<Variable, Openings[]>
 ): void {
   const mainPipe = pseudoAssignment[i];
   const mainVar = variables[i];
   const adjIndex = findAdj(i, Math.sqrt(pseudoAssignment.length));
-  const toPrune: PipeType[] = [];
+  const toPrune: Openings[] = [];
 
   // holds adjacent PipeTypes, not including the pipe that came before in the path
-  const adjPipeList: Array<PipeType | null> = [null, null, null, null];
+  const adjPipeList: Array<Openings | null> = [null, null, null, null];
   for (let i = 0; i < 4; i++) {
     if (adjIndex[i] !== -1 && i !== lastDir) {
       adjPipeList[i] = pseudoAssignment[adjIndex[i]];
     }
   }
 
-  const adjPipes: Array<PipeType | null> = [
+  const adjPipes: Array<Openings | null> = [
     adjPipeList[0],
     adjPipeList[1],
     adjPipeList[2],

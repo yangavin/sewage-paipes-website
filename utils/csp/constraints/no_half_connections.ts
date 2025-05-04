@@ -1,11 +1,11 @@
-import { PipeType } from "../utils";
+import { Openings } from "../utils";
 import { Variable } from "../csp";
 
 /**
  * Ensures that two horizontally-adjacent pipes are not blocking each other
  * @param pipes A tuple of two pipes. pipes[0] is the one on the left, pipes[1] is the one on the right
  */
-export function validatorH(pipes: PipeType[]): boolean {
+export function validatorH(pipes: Openings[]): boolean {
   const left = pipes[0];
   const right = pipes[1];
   // check if the left pipe's right opening is the same as the right pipe's left opening
@@ -16,7 +16,7 @@ export function validatorH(pipes: PipeType[]): boolean {
  * Ensures that two vertically-adjacent pipes are not blocking each other
  * @param pipes A tuple of two pipes. pipes[0] is the one above, pipes[1] is the one below
  */
-export function validatorV(pipes: PipeType[]): boolean {
+export function validatorV(pipes: Openings[]): boolean {
   const above = pipes[0];
   const below = pipes[1];
   // check if the top pipe's bottom opening is the same as the bottom pipe's top opening
@@ -28,14 +28,14 @@ export function validatorV(pipes: PipeType[]): boolean {
  * @param pipes Tuple of two pipes where pipes[0] is to the left of pipes[1]
  * @returns A map of the variables to the values to remove from their active domain
  */
-export function prunerH(pipes: Variable[]): Map<Variable, PipeType[]> {
+export function prunerH(pipes: Variable[]): Map<Variable, Openings[]> {
   const left = pipes[0];
   const right = pipes[1];
 
   const leftAssignment = left.getAssignment();
   const rightAssignment = right.getAssignment();
 
-  const toPrune = new Map<Variable, PipeType[]>();
+  const toPrune = new Map<Variable, Openings[]>();
 
   if (leftAssignment !== null && rightAssignment === null) {
     for (const pipeType of right.getActiveDomain()) {
@@ -79,14 +79,14 @@ export function prunerH(pipes: Variable[]): Map<Variable, PipeType[]> {
  * @param pipes Tuple of two pipes where pipes[0] is above pipes[1]
  * @returns A map of the variables to the values to remove from their active domain
  */
-export function prunerV(pipes: Variable[]): Map<Variable, PipeType[]> {
+export function prunerV(pipes: Variable[]): Map<Variable, Openings[]> {
   const top = pipes[0];
   const bottom = pipes[1];
 
   const topAssignment = top.getAssignment();
   const bottomAssignment = bottom.getAssignment();
 
-  const toPrune = new Map<Variable, PipeType[]>();
+  const toPrune = new Map<Variable, Openings[]>();
 
   if (topAssignment !== null && bottomAssignment === null) {
     for (const pipeType of bottom.getActiveDomain()) {

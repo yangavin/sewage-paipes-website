@@ -1,4 +1,4 @@
-import { PipeType, Assignment, findAdj, checkConnections } from "../utils";
+import { Openings, Assignment, findAdj, checkConnections } from "../utils";
 import { Variable } from "../csp";
 
 function assignmentHasCycle(
@@ -36,7 +36,7 @@ export function validator(assignment: Assignment): boolean {
 
 function getDuplicatedTouched(
   curr: number,
-  assignment: Array<PipeType | null>,
+  assignment: Array<Openings | null>,
   visited: Set<number>,
   touched: Map<number, number>,
   prev: number | null = null
@@ -88,8 +88,8 @@ function getDuplicatedTouched(
   return null;
 }
 
-export function pruner(variables: Variable[]): Map<Variable, PipeType[]> {
-  const assignment: Array<PipeType | null> = variables.map((v) =>
+export function pruner(variables: Variable[]): Map<Variable, Openings[]> {
+  const assignment: Array<Openings | null> = variables.map((v) =>
     v.getAssignment()
   );
   const n = Math.sqrt(assignment.length);
@@ -130,7 +130,7 @@ export function pruner(variables: Variable[]): Map<Variable, PipeType[]> {
           }
         }
 
-        const prunedValues: PipeType[] = [];
+        const prunedValues: Openings[] = [];
         for (const activeDomain of variableToPrune.getActiveDomain()) {
           if (
             activeDomain[touchedDirections[0]] &&
@@ -140,7 +140,7 @@ export function pruner(variables: Variable[]): Map<Variable, PipeType[]> {
           }
         }
 
-        const prunedDict = new Map<Variable, PipeType[]>();
+        const prunedDict = new Map<Variable, Openings[]>();
         prunedDict.set(variableToPrune, prunedValues);
 
         variableToPrune.prune(prunedValues);
@@ -150,5 +150,5 @@ export function pruner(variables: Variable[]): Map<Variable, PipeType[]> {
     }
   }
 
-  return new Map<Variable, PipeType[]>();
+  return new Map<Variable, Openings[]>();
 }

@@ -1,8 +1,8 @@
 // Contains some general functions used in various other Pipes CSP function implementations
 
-export type PipeType = [boolean, boolean, boolean, boolean];
-export type Assignment = PipeType[];
-export type PartialAssignment = Array<PipeType | null>;
+export type Openings = [boolean, boolean, boolean, boolean];
+export type Assignment = Openings[];
+export type PartialAssignment = Array<Openings | null>;
 
 // mapping of PipeTypes to a character that represents them visually.
 const PIPE_CHAR: { [key: string]: string } = {
@@ -22,11 +22,11 @@ const PIPE_CHAR: { [key: string]: string } = {
   "false,true,true,true": "┬", // T-junction (left, right, up)
 };
 
-function pipeTypeKey(pipe: PipeType): string {
+function pipeTypeKey(pipe: Openings): string {
   return pipe.join(",");
 }
 
-export function printPipesGrid(pipes: PipeType[]): void {
+export function printPipesGrid(pipes: Openings[]): void {
   const n = Math.sqrt(pipes.length);
   for (let i = 0; i < pipes.length; i++) {
     const key = pipeTypeKey(pipes[i]);
@@ -64,8 +64,8 @@ export function findAdj(
 }
 
 export function checkConnections(
-  center: PipeType,
-  adj: Array<PipeType | null>
+  center: Openings,
+  adj: Array<Openings | null>
 ): [boolean, boolean, boolean, boolean] {
   const connections: boolean[] = [false, false, false, false];
 

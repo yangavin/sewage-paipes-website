@@ -124,7 +124,7 @@ export function encodeBoardState(
     if (pipe === null) {
       throw new Error("Pipe is null");
     }
-    return pipe.pipe.map((val) => (val ? 1 : 0));
+    return pipe.openings.map((val) => (val ? 1 : 0));
   });
 }
 
@@ -165,7 +165,7 @@ export function isSolved(boardState: Array<PipeInstance | null>) {
   }
   // Convert to 2D array of booleans
   const board2D = boardState.map((pipe) => {
-    return pipe.pipe;
+    return pipe.openings;
   });
 
   return [

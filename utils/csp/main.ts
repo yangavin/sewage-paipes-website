@@ -1,12 +1,12 @@
 import { createPipesCSP } from "./combined";
-import { PipeType } from "./utils";
+import { Openings } from "./utils";
 
 /**
  * Generates a string representation of a pipe state
  * @param state An array of PipeType objects representing the puzzle state
  * @returns A string of 0s and 1s representing the state
  */
-function generateOneStateStr(state: PipeType[]): string {
+function generateOneStateStr(state: Openings[]): string {
   let output = "";
   for (const pipe of state) {
     for (let dir = 0; dir < 4; dir++) {
