@@ -6,6 +6,7 @@ import DroppableBox from "./DroppableBox";
 import DraggablePipe from "./DraggablePipe";
 import { Openings } from "@/utils/csp/utils";
 import { getPipeRotation, isSolved, pickMove } from "@/utils/Pipes";
+import { v4 as uuidv4 } from "uuid";
 
 const PIPES: Openings[] = [
   [true, false, false, false], // Type 1
@@ -14,6 +15,7 @@ const PIPES: Openings[] = [
   [true, true, false, true], // Type 4
 ];
 export interface PipeInstance {
+  id: string;
   openings: Openings;
   rotations: number;
 }
@@ -37,6 +39,7 @@ export default function BuildableBoard() {
         const currentPipe = prevState[index];
         if (currentPipe === null) return newState;
         newState[index] = {
+          id: currentPipe.id,
           openings: [
             currentPipe.openings[3],
             currentPipe.openings[0],
@@ -97,6 +100,7 @@ export default function BuildableBoard() {
       const newState = [...prevState];
       const rotations = getPipeRotation(pipe);
       newState[index] = {
+        id: uuidv4(),
         openings: [...pipe],
         rotations,
       };
@@ -152,6 +156,7 @@ export default function BuildableBoard() {
           >
             {pipeInstance && (
               <DraggablePipe
+                key={pipeInstance.id}
                 pipe={pipeInstance.openings}
                 rotations={pipeInstance.rotations}
                 onTurn={() => handlePipeTurn(index)}
