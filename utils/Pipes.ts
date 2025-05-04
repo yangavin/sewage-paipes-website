@@ -1,3 +1,5 @@
+import { PipeInstance } from "@/app/ai/BuildableBoard";
+
 export function getPipeType(boolArray: Array<boolean>): string {
   // Count the number of true values
   const trueCount = boolArray.filter((value) => value === true).length;
@@ -109,4 +111,15 @@ export function scrambleState(
     }
     return rotatedPipe;
   });
+}
+
+export function encodeBoardState(boardState: Array<PipeInstance | null>) {
+  return boardState
+    .map((pipe) => {
+      if (pipe === null) {
+        throw new Error("Pipe is null");
+      }
+      return pipe.pipe.map((val) => (val ? "1" : "0")).join("");
+    })
+    .join("");
 }

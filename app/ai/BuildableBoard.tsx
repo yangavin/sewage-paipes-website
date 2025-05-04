@@ -12,7 +12,7 @@ const PIPES = [
   [true, true, false, true], // Type 4
 ];
 
-interface PipeInstance {
+export interface PipeInstance {
   id: string;
   pipe: boolean[];
   rotation: number;
@@ -22,6 +22,7 @@ export default function BuildableBoard() {
   const [boardState, setBoardState] = useState<Array<PipeInstance | null>>(() =>
     Array(16).fill(null)
   );
+  const noEmpties = boardState.every((pipe) => pipe !== null);
 
   const generatePipeId = () => {
     return Math.random().toString(36).substring(2, 9);
@@ -82,7 +83,7 @@ export default function BuildableBoard() {
   return (
     <div>
       <div className="flex justify-center mb-6 gap-4">
-        <Button>Solve</Button>
+        <Button disabled={!noEmpties}>Solve</Button>
         <Button variant="destructive" onClick={handleClearBoard}>
           Clear
         </Button>
