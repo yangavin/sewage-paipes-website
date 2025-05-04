@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import {
   getPipeType,
-  getPipeOrientation as getPipeRotations,
+  getPipeRotation as getPipeRotations,
   decodeStateStr,
   scrambleState,
 } from "@/utils/Pipes";

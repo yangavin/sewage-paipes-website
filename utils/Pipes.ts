@@ -32,7 +32,7 @@ export function getPipeType(boolArray: Array<boolean>): string {
   return "0";
 }
 
-export function getPipeOrientation(arr: Array<boolean>): number {
+export function getPipeRotation(arr: Array<boolean>): number {
   const type = getPipeType(arr);
   if (type === "1") {
     if (arr[0]) {

@@ -1,45 +1,113 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { getPipeType } from "@/utils/Pipes";
 import { useState } from "react";
-import Image from "next/image";
+import DroppableBox from "./DroppableBox";
+import DraggablePipe from "./DraggablePipe";
+
+const PIPES = [
+  [true, false, false, false], // Type 1
+  [true, false, true, false], // Type 2
+  [true, true, false, false], // Type 3
+  [true, true, false, true], // Type 4
+];
+
+interface PipeInstance {
+  id: string;
+  pipe: boolean[];
+  rotation: number;
+}
 
 export default function BuildableBoard() {
-  const [currentState, setCurrentState] = useState<
-    Array<Array<boolean> | null>
-  >(Array(16).fill(null));
-  const [rotationCounts, setRotationCounts] = useState<number[]>([]);
+  const [boardState, setBoardState] = useState<Array<PipeInstance | null>>(() =>
+    Array(16).fill(null)
+  );
 
-  const handlePipeClick = (index: number) => {
-    if (currentState[index] === null) return;
-    const newState = [...currentState];
-    newState[index] = [
-      currentState[index][3],
-      currentState[index][0],
-      currentState[index][1],
-      currentState[index][2],
-    ];
-    setCurrentState(newState);
-
-    // Update rotation count
-    const newRotationCounts = [...rotationCounts];
-    newRotationCounts[index] = (rotationCounts[index] + 1) % 4;
-    setRotationCounts(newRotationCounts);
+  const generatePipeId = () => {
+    return Math.random().toString(36).substring(2, 9);
   };
 
-  const handleClear = () => {
-    setCurrentState(Array(16).fill(null));
-    setRotationCounts(Array(16).fill(0));
+  const handlePipeTurn = (index: number) => {
+    if (boardState[index] === null) return;
+    setBoardState((prevState) => {
+      const newState = [...prevState];
+      const currentPipe = prevState[index];
+      if (currentPipe === null) return newState;
+      newState[index] = {
+        ...currentPipe,
+        pipe: [
+          currentPipe.pipe[3],
+          currentPipe.pipe[0],
+          currentPipe.pipe[1],
+          currentPipe.pipe[2],
+        ],
+        rotation: currentPipe.rotation + 1,
+      };
+      return newState;
+    });
+  };
+
+  const handleClearBoard = () => {
+    setBoardState(Array(16).fill(null));
+  };
+
+  const handleDeletePipe = (index: number) => {
+    setBoardState((prevState) => {
+      const newState = [...prevState];
+      newState[index] = null;
+      return newState;
+    });
+  };
+
+  const handleReplacePipe = (
+    index: number,
+    pipeData: { pipe: boolean[]; id?: string }
+  ) => {
+    setBoardState((prevState) => {
+      const newState = [...prevState];
+      // If an ID is provided, it means we're moving an existing pipe
+      const rotation = pipeData.id
+        ? prevState.find((p) => p?.id === pipeData.id)?.rotation || 0
+        : 0;
+
+      newState[index] = {
+        id: generatePipeId(),
+        pipe: [...pipeData.pipe],
+        rotation,
+      };
+      return newState;
+    });
   };
 
   return (
     <div>
-      <div className="flex gap-4 justify-center mb-6">
-        <Button variant="outline" onClick={handleClear}>
+      <div className="flex justify-center mb-6 gap-4">
+        <Button>Solve</Button>
+        <Button variant="destructive" onClick={handleClearBoard}>
           Clear
         </Button>
       </div>
+
+      <div className="flex w-1/5 mx-auto">
+        {[1, 2, 3, 4].map((pipeType) => {
+          return (
+            <div
+              key={pipeType}
+              className="border border-gray-300 bg-white cursor-pointer"
+            >
+              <DraggablePipe
+                id={`template-${pipeType}`}
+                pipe={PIPES[pipeType - 1]}
+                rotation={0}
+                onTurn={() => {}}
+                onDelete={() => {}}
+                isTemplate={true}
+              />
+            </div>
+          );
+        })}
+      </div>
+
       <div
         className="grid w-1/3 aspect-square mx-auto my-4"
         style={{
@@ -47,25 +115,24 @@ export default function BuildableBoard() {
           gridTemplateRows: `repeat(${4}, minmax(0, 1fr))`,
         }}
       >
-        {currentState.map((pipe, index) => (
-          <div
+        {boardState.map((pipeInstance, index) => (
+          <DroppableBox
+            onDrop={(pipe: boolean[], id?: string) =>
+              handleReplacePipe(index, { pipe, id })
+            }
             key={index}
-            className="border border-gray-300 bg-white cursor-pointer"
-            onClick={() => handlePipeClick(index)}
           >
-            {pipe && (
-              <Image
-                src={`/type${getPipeType(pipe)}.svg`}
-                className="w-full h-full transition-transform duration-200"
-                style={{
-                  transform: `rotate(${rotationCounts[index] * 90}deg)`,
-                }}
-                alt={`Pipe type ${getPipeType(pipe)}`}
-                width={100}
-                height={100}
+            {pipeInstance && (
+              <DraggablePipe
+                id={pipeInstance.id}
+                pipe={pipeInstance.pipe}
+                rotation={pipeInstance.rotation}
+                onTurn={() => handlePipeTurn(index)}
+                onDelete={() => handleDeletePipe(index)}
+                isTemplate={false}
               />
             )}
-          </div>
+          </DroppableBox>
         ))}
       </div>
     </div>
