@@ -2,10 +2,11 @@ import Image from "next/image";
 import { useDrag } from "react-dnd";
 import { getPipeType } from "@/utils/Pipes";
 import { useRef } from "react";
+import { PipeType } from "@/utils/csp/utils";
 
 interface DraggablePipeProps {
   id: string;
-  pipe: boolean[];
+  pipe: PipeType;
   rotation: number;
   onTurn: () => void;
   onDelete: () => void;

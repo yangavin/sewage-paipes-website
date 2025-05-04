@@ -1,4 +1,8 @@
 import { PipeInstance } from "@/app/ai/BuildableBoard";
+import { runInference } from "@/app/ai/model";
+import { validator as connectedValidator } from "./csp/constraints/connected";
+import { validator as noCyclesValidator } from "./csp/constraints/no_cycles";
+import { validatorH, validatorV } from "./csp/constraints/no_half_connections";
 
 export function getPipeType(boolArray: Array<boolean>): string {
   // Count the number of true values
@@ -113,13 +117,61 @@ export function scrambleState(
   });
 }
 
-export function encodeBoardState(boardState: Array<PipeInstance | null>) {
-  return boardState
-    .map((pipe) => {
-      if (pipe === null) {
-        throw new Error("Pipe is null");
-      }
-      return pipe.pipe.map((val) => (val ? "1" : "0")).join("");
-    })
-    .join("");
+export function encodeBoardState(
+  boardState: Array<PipeInstance | null>
+): number[] {
+  return boardState.flatMap((pipe) => {
+    if (pipe === null) {
+      throw new Error("Pipe is null");
+    }
+    return pipe.pipe.map((val) => (val ? 1 : 0));
+  });
+}
+
+export async function pickMove(
+  boardState: Array<PipeInstance | null>,
+  attemptedMoves: { [key: string]: number[] }
+) {
+  const encodedState = encodeBoardState(boardState);
+  const output = await runInference(encodedState);
+  // sort by greatest to least
+  const sortedOutput = [...output].sort((a, b) => b - a);
+
+  for (let i = 0; i < sortedOutput.length; i++) {
+    const move = output.indexOf(sortedOutput[i]);
+    const triedMoves = attemptedMoves[String(encodedState)];
+    if (triedMoves && triedMoves.includes(i)) {
+      continue;
+    }
+
+    // add the move to attmpted moves in the correct state
+    if (triedMoves) {
+      attemptedMoves[String(encodedState)].push(i);
+    } else {
+      attemptedMoves[String(encodedState)] = [i];
+    }
+
+    return {
+      move,
+      attemptedMoves: { ...attemptedMoves },
+    };
+  }
+  throw new Error("No valid moves found");
+}
+
+export function isSolved(boardState: Array<PipeInstance | null>) {
+  if (!boardState.every((pipe) => pipe !== null)) {
+    throw new Error("Board is not full");
+  }
+  // Convert to 2D array of booleans
+  const board2D = boardState.map((pipe) => {
+    return pipe.pipe;
+  });
+
+  return [
+    connectedValidator(board2D),
+    noCyclesValidator(board2D),
+    validatorH(board2D),
+    validatorV(board2D),
+  ].every((validator) => validator);
 }

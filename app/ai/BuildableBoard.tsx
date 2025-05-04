@@ -1,11 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DroppableBox from "./DroppableBox";
 import DraggablePipe from "./DraggablePipe";
+import { PipeType } from "@/utils/csp/utils";
+import { isSolved, pickMove } from "@/utils/Pipes";
 
-const PIPES = [
+const PIPES: PipeType[] = [
   [true, false, false, false], // Type 1
   [true, false, true, false], // Type 2
   [true, true, false, false], // Type 3
@@ -14,7 +16,7 @@ const PIPES = [
 
 export interface PipeInstance {
   id: string;
-  pipe: boolean[];
+  pipe: PipeType;
   rotation: number;
 }
 
@@ -22,30 +24,67 @@ export default function BuildableBoard() {
   const [boardState, setBoardState] = useState<Array<PipeInstance | null>>(() =>
     Array(16).fill(null)
   );
+  console.log(boardState);
+  const [attemptedMoves, setAttemptedMoves] = useState<{
+    [key: string]: number[];
+  }>({});
+  const [isSolving, setIsSolving] = useState(false);
+
+  const handlePipeTurn = useCallback(
+    (index: number) => {
+      console.log("TURNING: ", index);
+      if (boardState[index] === null) return;
+      setBoardState((prevState) => {
+        const newState = [...prevState];
+        const currentPipe = prevState[index];
+        if (currentPipe === null) return newState;
+        newState[index] = {
+          ...currentPipe,
+          pipe: [
+            currentPipe.pipe[3],
+            currentPipe.pipe[0],
+            currentPipe.pipe[1],
+            currentPipe.pipe[2],
+          ],
+          rotation: currentPipe.rotation + 1,
+        };
+        return newState;
+      });
+    },
+    [boardState]
+  );
+
+  useEffect(() => {
+    if (!isSolving) return;
+
+    // already done?
+    if (isSolved(boardState)) {
+      console.log("SOLVED:", boardState);
+      setIsSolving(false);
+      setAttemptedMoves({});
+      return;
+    }
+
+    // run ONE move, then let the next render/effect decide again
+    let cancelled = false;
+    (async () => {
+      const output = await pickMove(boardState, attemptedMoves);
+      if (cancelled) return; // board changed meanwhile – abort
+
+      setAttemptedMoves(output.attemptedMoves);
+      handlePipeTurn(output.move); // triggers next render
+    })();
+
+    // if boardState or isSolving changes before pickMove resolves, abort
+    return () => {
+      cancelled = true;
+    };
+  }, [isSolving, boardState, attemptedMoves, handlePipeTurn]); // deps
+
   const noEmpties = boardState.every((pipe) => pipe !== null);
 
   const generatePipeId = () => {
     return Math.random().toString(36).substring(2, 9);
-  };
-
-  const handlePipeTurn = (index: number) => {
-    if (boardState[index] === null) return;
-    setBoardState((prevState) => {
-      const newState = [...prevState];
-      const currentPipe = prevState[index];
-      if (currentPipe === null) return newState;
-      newState[index] = {
-        ...currentPipe,
-        pipe: [
-          currentPipe.pipe[3],
-          currentPipe.pipe[0],
-          currentPipe.pipe[1],
-          currentPipe.pipe[2],
-        ],
-        rotation: currentPipe.rotation + 1,
-      };
-      return newState;
-    });
   };
 
   const handleClearBoard = () => {
@@ -62,7 +101,7 @@ export default function BuildableBoard() {
 
   const handleReplacePipe = (
     index: number,
-    pipeData: { pipe: boolean[]; id?: string }
+    pipeData: { pipe: PipeType; id?: string }
   ) => {
     setBoardState((prevState) => {
       const newState = [...prevState];
@@ -80,10 +119,17 @@ export default function BuildableBoard() {
     });
   };
 
+  const handleSolveToggle = () => {
+    if (isSolving) setAttemptedMoves({});
+    setIsSolving(!isSolving);
+  };
+
   return (
     <div>
       <div className="flex justify-center mb-6 gap-4">
-        <Button disabled={!noEmpties}>Solve</Button>
+        <Button disabled={!noEmpties} onClick={handleSolveToggle}>
+          {isSolving ? "Stop" : "Solve"}
+        </Button>
         <Button variant="destructive" onClick={handleClearBoard}>
           Clear
         </Button>
@@ -118,7 +164,7 @@ export default function BuildableBoard() {
       >
         {boardState.map((pipeInstance, index) => (
           <DroppableBox
-            onDrop={(pipe: boolean[], id?: string) =>
+            onDrop={(pipe: PipeType, id?: string) =>
               handleReplacePipe(index, { pipe, id })
             }
             key={index}

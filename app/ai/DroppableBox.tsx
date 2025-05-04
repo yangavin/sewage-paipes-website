@@ -1,15 +1,16 @@
 import { useRef } from "react";
 import { useDrop } from "react-dnd";
+import { PipeType } from "@/utils/csp/utils";
 
 interface DroppableBoxProp {
   children?: React.ReactNode;
-  onDrop: (pipe: boolean[], id?: string) => void;
+  onDrop: (pipe: PipeType, id?: string) => void;
 }
 
 export default function DroppableBox({ children, onDrop }: DroppableBoxProp) {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "PIPE",
-    drop: ({ pipe, id }: { pipe: boolean[]; id?: string }) => onDrop(pipe, id),
+    drop: ({ pipe, id }: { pipe: PipeType; id?: string }) => onDrop(pipe, id),
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
     }),
