@@ -6,9 +6,7 @@ export async function runInference(inputArray: number[]): Promise<number[]> {
   }
 
   // Load the model
-  const session = await ort.InferenceSession.create(
-    "http://localhost:3000/model.onnx"
-  );
+  const session = await ort.InferenceSession.create("/model.onnx");
 
   // Prepare input tensor
   const tensor = new ort.Tensor(
