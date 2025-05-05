@@ -185,7 +185,7 @@ export default function BuildableBoard() {
         </div>
       </div>
 
-      <div className="w-1/4">
+      <div className="w-1/4 flex items-center">
         <Card>
           <CardHeader>
             <CardTitle>How it Works</CardTitle>
