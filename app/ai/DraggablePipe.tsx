@@ -7,6 +7,7 @@ import { Openings } from "@/utils/csp/utils";
 interface DraggablePipeProps {
   pipe: Openings;
   rotations: number;
+  isSolving: boolean;
   onTurn: () => void;
   onDelete: () => void;
 }
@@ -14,6 +15,7 @@ interface DraggablePipeProps {
 export default function DraggablePipe({
   pipe,
   rotations,
+  isSolving,
   onTurn,
   onDelete,
 }: DraggablePipeProps) {
@@ -35,9 +37,19 @@ export default function DraggablePipe({
     onDelete();
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isSolving) return;
+    onTurn();
+  };
+
   const pipeType = getPipeType(pipe);
   return (
-    <div ref={ref} onClick={onTurn} onContextMenu={handleContextMenu}>
+    <div
+      ref={!isSolving ? ref : null}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+    >
       <Image
         src={`/type${pipeType}.svg`}
         className="w-full h-full transition-transform duration-200"
