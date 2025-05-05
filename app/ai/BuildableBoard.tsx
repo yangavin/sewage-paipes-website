@@ -7,6 +7,21 @@ import DraggablePipe from "./DraggablePipe";
 import { Openings } from "@/utils/csp/utils";
 import { getPipeRotation, isSolved, pickMove } from "@/utils/Pipes";
 import { v4 as uuidv4 } from "uuid";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  PlayCircle,
+  StopCircle,
+  Trash2,
+  RotateCw,
+  MousePointerClick,
+  GripHorizontal,
+} from "lucide-react";
 
 const PIPES: Openings[] = [
   [true, false, false, false], // Type 1
@@ -123,7 +138,7 @@ export default function BuildableBoard() {
 
   return (
     <div className="flex gap-24 justify-center">
-      <div className="border-2 w-1/2">
+      <div className="w-1/2">
         <div className="flex w-1/3 mx-auto">
           {PIPES.map((openings, i) => {
             return (
@@ -170,45 +185,72 @@ export default function BuildableBoard() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-around mb-6 gap-4 border-2 w-1/4">
-        <div className="text-center flex flex-col gap-2">
-          <h1 className="text-4xl">How it Works</h1>
-          <p>
-            Drag the pieces to create a create a puzzle, then click
-            &quot;Solve&quot; to start the AI solver.
-          </p>
-          <h2 className="text-3xl">Controls</h2>
-          <ol>
-            <li>
-              Drag and drop pipes from the top of the board to place pipes
-            </li>
-            <li>Click on a pipe to rotate it</li>
-            <li>Right click on a pipe to remove it</li>
-            <li>
-              Dragging a pipe to another square copies the pipe to that square
-            </li>
-          </ol>
-        </div>
+      <div className="w-1/4">
+        <Card>
+          <CardHeader>
+            <CardTitle>How it Works</CardTitle>
+            <CardDescription>
+              Create a puzzle and let the AI solve it for you
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Controls</h3>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <GripHorizontal className="h-4 w-4" />
+                  Drag and drop pipes from the top to place them
+                </li>
+                <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MousePointerClick className="h-4 w-4" />
+                  Click on a pipe to rotate it
+                </li>
+                <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Trash2 className="h-4 w-4" />
+                  Right click on a pipe to remove it
+                </li>
+                <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <RotateCw className="h-4 w-4" />
+                  Dragging a pipe to another square copies it
+                </li>
+              </ul>
+            </div>
 
-        <div>
-          <h2 className="text-center mb-5">Moves: {moveCount}</h2>
-          <div className="flex justify-center gap-4">
-            <Button
-              disabled={!noEmpties}
-              variant={isSolving ? "outline" : "default"}
-              onClick={handleSolveToggle}
-            >
-              {isSolving ? "Stop" : "Solve"}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isSolving}
-              onClick={handleClearBoard}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Moves</h3>
+                <span className="text-2xl font-mono">{moveCount}</span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1"
+                  disabled={!noEmpties}
+                  variant={isSolving ? "outline" : "default"}
+                  onClick={handleSolveToggle}
+                >
+                  {isSolving ? (
+                    <>
+                      <StopCircle className="mr-2 h-4 w-4" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="mr-2 h-4 w-4" />
+                      Solve
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={isSolving}
+                  onClick={handleClearBoard}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
