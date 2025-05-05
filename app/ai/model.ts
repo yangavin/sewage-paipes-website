@@ -16,7 +16,8 @@ export async function runInference(inputArray: number[]): Promise<number[]> {
   ); // Shape [1, 64]
 
   // Run inference
-  const feeds: Record<string, ort.Tensor> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const feeds: Record<string, any> = {};
   feeds[session.inputNames[0]] = tensor; // Use the model's first input name
 
   const results = await session.run(feeds);
