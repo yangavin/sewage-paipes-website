@@ -7,7 +7,13 @@ export function validator(pipes: Openings[]): boolean {
   return visited.length === pipes.length;
 }
 
-function dft(pipes: Openings[], loc: number, visited: number[]): void {
+function dft(pipes: Openings[], loc: number, visited: number[], depth: number = 0): void {
+  // Prevent infinite recursion
+  const maxDepth = pipes.length;
+  if (depth >= maxDepth) {
+    console.warn(`dft: Maximum recursion depth reached (${maxDepth})`);
+    return;
+  }
   visited.push(loc);
   const adjVals = findAdj(loc, Math.sqrt(pipes.length));
 
@@ -25,7 +31,7 @@ function dft(pipes: Openings[], loc: number, visited: number[]): void {
 
   for (let i = 0; i < 4; i++) {
     if (connections[i] && !visited.includes(adjVals[i])) {
-      dft(pipes, adjVals[i], visited);
+      dft(pipes, adjVals[i], visited, depth + 1);
     }
   }
 }
@@ -89,8 +95,23 @@ function findIsolatedPath(
   pseudoAssignment: Openings[],
   i: number,
   lastDir: number,
-  pruned: Map<Variable, Openings[]>
+  pruned: Map<Variable, Openings[]>,
+  visited: Set<number> = new Set(), // Add cycle detection
+  depth: number = 0 // Add recursion depth tracking
 ): void {
+  // Prevent infinite recursion
+  const maxDepth = pseudoAssignment.length; // Can't be longer than total variables
+  if (depth >= maxDepth) {
+    console.warn(`findIsolatedPath: Maximum recursion depth reached (${maxDepth})`);
+    return;
+  }
+  
+  // Prevent cycles
+  if (visited.has(i)) {
+    return; // Already visited this node in current path
+  }
+  
+  visited.add(i);
   const mainPipe = pseudoAssignment[i];
   const mainVar = variables[i];
   const adjIndex = findAdj(i, Math.sqrt(pseudoAssignment.length));
@@ -147,12 +168,16 @@ function findIsolatedPath(
       mainVar.prune(toPrune);
     }
 
+    // Create a new visited set for the recursive call to allow backtracking
+    const newVisited = new Set(visited);
     findIsolatedPath(
       variables,
       pseudoAssignment,
       adjIndex[pathDir],
       (pathDir + 2) % 4,
-      pruned
+      pruned,
+      newVisited,
+      depth + 1
     );
   }
 }

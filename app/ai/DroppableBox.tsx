@@ -24,16 +24,16 @@ export default function DroppableBox({
   drop(ref);
 
   const bgColor = isSolving
-    ? "bg-gray-100"
+    ? "bg-muted/50"
     : isOver
-    ? "bg-gray-300"
-    : "bg-white";
+    ? "bg-accent/40"
+    : "bg-background";
 
   return (
     <div
-      className={`border border-gray-300 ${bgColor} ${
-        !isSolving ? "cursor-pointer" : ""
-      }`}
+      className={`border border-grid-line ${bgColor} ${
+        !isSolving ? "cursor-pointer hover:bg-accent/20" : ""
+      } transition-all duration-200 relative group`}
       ref={ref}
       onContextMenu={(e) => e.preventDefault()}
     >

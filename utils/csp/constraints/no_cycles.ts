@@ -5,8 +5,15 @@ function assignmentHasCycle(
   curr: number,
   assignment: Assignment,
   visited: Set<number>,
-  prev: number | null = null
+  prev: number | null = null,
+  depth: number = 0 // Add recursion depth tracking
 ): boolean {
+  // Prevent infinite recursion
+  const maxDepth = assignment.length;
+  if (depth >= maxDepth) {
+    console.warn(`assignmentHasCycle: Maximum recursion depth reached (${maxDepth})`);
+    return false; // Assume no cycle to avoid getting stuck
+  }
   if (visited.has(curr)) {
     return true;
   }
@@ -21,7 +28,7 @@ function assignmentHasCycle(
 
   for (let i = 0; i < 4; i++) {
     if (adjConnections[i] && adjIndexes[i] !== prev) {
-      if (assignmentHasCycle(adjIndexes[i], assignment, visited, curr)) {
+      if (assignmentHasCycle(adjIndexes[i], assignment, visited, curr, depth + 1)) {
         return true;
       }
     }
@@ -39,8 +46,15 @@ function getDuplicatedTouched(
   assignment: Array<Openings | null>,
   visited: Set<number>,
   touched: Map<number, number>,
-  prev: number | null = null
+  prev: number | null = null,
+  depth: number = 0 // Add recursion depth tracking
 ): [number, number, number] | null {
+  // Prevent infinite recursion
+  const maxDepth = assignment.length;
+  if (depth >= maxDepth) {
+    console.warn(`getDuplicatedTouched: Maximum recursion depth reached (${maxDepth})`);
+    return null;
+  }
   visited.add(curr);
 
   const centerPipe = assignment[curr];
@@ -76,7 +90,8 @@ function getDuplicatedTouched(
         assignment,
         visited,
         touched,
-        curr
+        curr,
+        depth + 1
       );
 
       if (duplicateTouch) {

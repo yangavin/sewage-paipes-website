@@ -137,89 +137,113 @@ export default function BuildableBoard() {
   };
 
   return (
-    <div className="flex gap-24 justify-center">
-      <div className="w-1/2">
-        <div className="flex w-1/3 mx-auto">
-          {PIPES.map((openings, i) => {
-            return (
-              <div
-                key={i}
-                className="border border-gray-300 bg-white cursor-pointer"
-              >
-                <DraggablePipe
-                  pipe={[...openings]}
-                  rotations={0}
-                  onTurn={() => {}}
-                  onDelete={() => {}}
-                  isSolving={isSolving}
-                />
-              </div>
-            );
-          })}
+    <div className="flex flex-col lg:flex-row gap-12 justify-center items-center">
+      <div className="w-full lg:w-1/2">
+        {/* Pipe Palette */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-semibold">Pipe Types</h3>
+          </div>
+          <div className="flex gap-2 justify-center bg-card rounded-lg p-4 border-2 border-border shadow-sm">
+            {PIPES.map((openings, i) => {
+              return (
+                <div
+                  key={i}
+                  className="border-2 border-grid-line bg-background rounded-md overflow-hidden hover:border-primary transition-colors"
+                >
+                  <DraggablePipe
+                    pipe={[...openings]}
+                    rotations={0}
+                    onTurn={() => {}}
+                    onDelete={() => {}}
+                    isSolving={isSolving}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-sm text-muted-foreground text-center mt-3 handwritten">
+            Drag these pipes onto the board below
+          </p>
         </div>
-        <div
-          className="grid w-2/3 aspect-square mx-auto my-4"
-          style={{
-            gridTemplateColumns: `repeat(${4}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${4}, minmax(0, 1fr))`,
-          }}
-        >
-          {boardState.map((pipeInstance, index) => (
-            <DroppableBox
-              key={index}
-              onDrop={(pipe: Openings) => handleReplacePipe(index, pipe)}
-              isSolving={isSolving}
-            >
-              {pipeInstance && (
-                <DraggablePipe
-                  key={pipeInstance.id}
-                  pipe={pipeInstance.openings}
-                  rotations={pipeInstance.rotations}
-                  onTurn={() => handlePipeTurn(index)}
-                  onDelete={() => handleDeletePipe(index)}
-                  isSolving={isSolving}
-                />
-              )}
-            </DroppableBox>
-          ))}
+
+        {/* Board */}
+        <div className="flex justify-center">
+          <div
+            className="inline-grid bg-card rounded-lg shadow-lg border-2 border-border overflow-hidden"
+            style={{
+              gridTemplateColumns: `repeat(${4}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${4}, minmax(0, 1fr))`,
+              maxWidth: "500px",
+              width: "100%",
+              aspectRatio: "1",
+            }}
+          >
+            {boardState.map((pipeInstance, index) => (
+              <DroppableBox
+                key={index}
+                onDrop={(pipe: Openings) => handleReplacePipe(index, pipe)}
+                isSolving={isSolving}
+              >
+                {pipeInstance && (
+                  <DraggablePipe
+                    key={pipeInstance.id}
+                    pipe={pipeInstance.openings}
+                    rotations={pipeInstance.rotations}
+                    onTurn={() => handlePipeTurn(index)}
+                    onDelete={() => handleDeletePipe(index)}
+                    isSolving={isSolving}
+                  />
+                )}
+              </DroppableBox>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="w-1/4 flex items-center">
-        <Card>
+      <div className="w-full lg:w-1/3">
+        <Card className="sticky top-24">
           <CardHeader>
-            <CardTitle>How it Works</CardTitle>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">🧠</span>
+              <CardTitle>AI Solver</CardTitle>
+            </div>
             <CardDescription>
-              Create a puzzle and let the AI solve it for you
+              Create a pipe puzzle and watch the AI solve it step by step
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-3">Controls</h3>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+                <span>📖</span>
+                Instructions
+              </h3>
               <ul className="space-y-3">
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <GripHorizontal className="h-4 w-4" />
-                  Drag and drop pipes from the top to place them
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <GripHorizontal className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>Drag pipes from above onto the board</span>
                 </li>
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MousePointerClick className="h-4 w-4" />
-                  Click on a pipe to rotate it
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <MousePointerClick className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>Left-click a pipe to rotate it</span>
                 </li>
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Trash2 className="h-4 w-4" />
-                  Right click on a pipe to remove it
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Trash2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>Right-click a pipe to remove it</span>
                 </li>
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <RotateCw className="h-4 w-4" />
-                  Dragging a pipe to another square copies it
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <RotateCw className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>Drag between squares to copy pipes</span>
                 </li>
               </ul>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Moves</h3>
-                <span className="text-2xl font-mono">{moveCount}</span>
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold">Moves Made</h3>
+                <span className="text-3xl font-mono bg-accent/30 px-4 py-1 rounded-md">
+                  {moveCount}
+                </span>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -244,10 +268,16 @@ export default function BuildableBoard() {
                   variant="destructive"
                   disabled={isSolving}
                   onClick={handleClearBoard}
+                  size="icon"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+              {!noEmpties && (
+                <p className="text-xs text-muted-foreground mt-3 text-center handwritten">
+                  Fill the board to start solving!
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

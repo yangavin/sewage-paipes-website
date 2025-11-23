@@ -204,12 +204,18 @@ export class CSP {
     });
   }
 
-  // Optimized implementation of ac3
+  // Optimized implementation of ac3 with iteration limits to prevent infinite loops
   ac3(queue: Constraint[]): Map<Variable, Openings[]> {
     const prunedAll = new Map<Variable, Openings[]>();
     const queueCopy = [...queue]; // Create a copy to avoid modifying the original
+    
+    // Safety limit: prevent infinite loops in constraint propagation
+    const maxIterations = this.vars.length * this.cons.length * 10; // Reasonable upper bound
+    let iterations = 0;
 
-    while (queueCopy.length > 0) {
+    while (queueCopy.length > 0 && iterations < maxIterations) {
+      iterations++;
+      
       const con = queueCopy.shift()!;
       const pruned = con.prune();
 
@@ -232,6 +238,11 @@ export class CSP {
         }
       }
     }
+    
+    // If we hit the iteration limit, log a warning but continue
+    if (iterations >= maxIterations) {
+      console.warn(`AC3 iteration limit reached (${maxIterations}). This may indicate constraint cycles.`);
+    }
 
     return prunedAll;
   }
@@ -251,6 +262,11 @@ export class CSP {
     }
 
     const stack: SearchState[] = [];
+    
+    // Safety limits to prevent infinite loops
+    const maxIterations = this.vars.length * this.vars.length * 1000; // Exponential bound based on search space
+    const maxStackDepth = this.vars.length * 2; // Prevent excessive recursion depth
+    let iterations = 0;
 
     // Initial state
     if (this.unassignedVars.length > 0) {
@@ -270,7 +286,8 @@ export class CSP {
       }
     }
 
-    while (stack.length > 0) {
+    while (stack.length > 0 && iterations < maxIterations) {
+      iterations++;
       // Check if max solutions reached
       if (maxSolutions !== -1 && solutions.size >= maxSolutions) {
         return solutions.size;
@@ -376,22 +393,37 @@ export class CSP {
         state.domainIndex++;
         state.pruned = new Map();
       } else if (this.unassignedVars.length > 0) {
-        // Move deeper in search tree
-        const nextVar = this.manhattanDistToConnection(randomStart);
-        const nextActiveDomain = [...nextVar.getActiveDomain()];
+        // Check stack depth to prevent excessive recursion
+        if (stack.length >= maxStackDepth) {
+          console.warn(`Maximum stack depth reached (${maxStackDepth}). Backtracking...`);
+          // Force backtrack by treating this as no active domains
+          state.domainIndex++;
+          state.pruned = new Map();
+        } else {
+          // Move deeper in search tree
+          const nextVar = this.manhattanDistToConnection(randomStart);
+          const nextActiveDomain = [...nextVar.getActiveDomain()];
 
-        if (randomStart) {
-          this.shuffle(nextActiveDomain);
+          if (randomStart) {
+            this.shuffle(nextActiveDomain);
+          }
+
+          stack.push({
+            variable: nextVar,
+            domainIndex: 0,
+            activeDomain: nextActiveDomain,
+            pruned: new Map(),
+          });
         }
-
-        stack.push({
-          variable: nextVar,
-          domainIndex: 0,
-          activeDomain: nextActiveDomain,
-          pruned: new Map(),
-        });
       }
       // If unassignedVars is empty, loop will continue to solution handling
+    }
+    
+    // If we hit the iteration limit, log a warning
+    if (iterations >= maxIterations) {
+      console.warn(`GAC iteration limit reached (${maxIterations}). Search terminated early.`);
+      console.warn(`This may indicate an infinite loop or excessively large search space.`);
+      console.warn(`Consider using smaller board sizes or optimizing constraints.`);
     }
 
     return solutions.size;
