@@ -113,14 +113,6 @@ export class Constraint {
   }
 }
 
-// Interface for stack frames in the iterative gacAll implementation
-interface GacStackFrame {
-  currVar: Variable;
-  domainIndex: number;
-  active: Openings[];
-  backup: Map<Variable, Openings[]>;
-}
-
 export class CSP {
   name: string;
   vars: Variable[] = [];
@@ -128,6 +120,18 @@ export class CSP {
   varsToCons: Map<Variable, Constraint[]> = new Map();
   assignedVars: Variable[] = [];
   unassignedVars: Variable[] = [];
+
+  /**
+   * Wall-clock cutoff (ms since epoch) for the current search. The randomized
+   * search is heavy-tailed: most seeds solve a 25x25 board in a few seconds,
+   * but a small fraction wander into a region that takes effectively forever.
+   * Rather than let that hang the page, the search abandons the attempt once
+   * this deadline passes and the caller retries with a fresh random seed.
+   */
+  deadline: number = Infinity;
+
+  /** Set when a search bailed out because {@link deadline} passed. */
+  timedOut: boolean = false;
 
   constructor(name: string, vars: Variable[], cons: Constraint[]) {
     this.name = name;
@@ -208,14 +212,21 @@ export class CSP {
   ac3(queue: Constraint[]): Map<Variable, Openings[]> {
     const prunedAll = new Map<Variable, Openings[]>();
     const queueCopy = [...queue]; // Create a copy to avoid modifying the original
-    
+
     // Safety limit: prevent infinite loops in constraint propagation
     const maxIterations = this.vars.length * this.cons.length * 10; // Reasonable upper bound
     let iterations = 0;
 
     while (queueCopy.length > 0 && iterations < maxIterations) {
       iterations++;
-      
+
+      // A single ac3 pass can itself run long on a bad branch, so honour the
+      // search deadline here too rather than only between search nodes.
+      if ((iterations & 0xff) === 0 && Date.now() > this.deadline) {
+        this.timedOut = true;
+        return prunedAll;
+      }
+
       const con = queueCopy.shift()!;
       const pruned = con.prune();
 
@@ -247,185 +258,111 @@ export class CSP {
     return prunedAll;
   }
 
+  /**
+   * Finds all solutions to the csp using generalized arc consistency. Solutions are
+   * accumulated into the `solutions` set passed in as a parameter.
+   *
+   * This is a direct port of the recursive `gac_all` from the Python implementation
+   * (see csp.py). It intentionally mirrors that recursion (including the full
+   * domain backup/restore per branch) rather than a hand-rolled iterative stack
+   * machine, since a previous iterative rewrite of this method diverged from the
+   * Python semantics on backtracking and could get stuck in an unbounded loop.
+   *
+   * @param solutions Set where solutions (as JSON strings) are accumulated
+   * @param maxSolutions the maximum number of solutions to generate, -1 for unlimited
+   * @param printSolutions whether to print a visual representation of each solution
+   * @param randomStart whether to randomize variable/value selection order
+   * @returns the number of solutions generated so far
+   */
   gacAll(
     solutions: Set<string>,
     maxSolutions: number = -1,
     printSolutions: boolean = false,
     randomStart: boolean = false
   ): number {
-    // Stack to track search state
-    interface SearchState {
-      variable: Variable;
-      domainIndex: number;
-      activeDomain: Openings[];
-      pruned: Map<Variable, Openings[]>;
+    // check if enough solutions have been generated
+    if (maxSolutions !== -1 && solutions.size >= maxSolutions) {
+      return solutions.size;
     }
 
-    const stack: SearchState[] = [];
-    
-    // Safety limits to prevent infinite loops
-    const maxIterations = this.vars.length * this.vars.length * 1000; // Exponential bound based on search space
-    const maxStackDepth = this.vars.length * 2; // Prevent excessive recursion depth
-    let iterations = 0;
-
-    // Initial state
-    if (this.unassignedVars.length > 0) {
-      const initialVar = this.manhattanDistToConnection(randomStart);
-      const activeDomain = [...initialVar.getActiveDomain()];
-      if (randomStart) {
-        this.shuffle(activeDomain);
-      }
-
-      if (activeDomain.length > 0) {
-        stack.push({
-          variable: initialVar,
-          domainIndex: 0,
-          activeDomain,
-          pruned: new Map(),
-        });
-      }
+    // abandon this attempt if it has outrun its time budget
+    if (this.timedOut || Date.now() > this.deadline) {
+      this.timedOut = true;
+      return solutions.size;
     }
 
-    while (stack.length > 0 && iterations < maxIterations) {
-      iterations++;
-      // Check if max solutions reached
-      if (maxSolutions !== -1 && solutions.size >= maxSolutions) {
-        return solutions.size;
-      }
+    // check if all variables in the csp have been assigned
+    if (this.unassignedVars.length === 0) {
+      const currAssignment = this.getAssignment();
+      const solutionStr = JSON.stringify(currAssignment);
 
-      // If no unassigned vars, we have a solution
-      if (this.unassignedVars.length === 0) {
-        const currAssignment = this.getAssignment();
-        const solutionStr = JSON.stringify(currAssignment);
-
-        if (!solutions.has(solutionStr)) {
-          // Verify no constraints are violated
-          let valid = true;
-          for (const con of this.cons) {
-            if (con.violated()) {
-              valid = false;
-              break;
-            }
-          }
-
-          if (valid) {
-            solutions.add(solutionStr);
-            if (printSolutions) {
-              printPipesGrid(currAssignment);
-              console.log(solutions.size);
-              console.log();
-            }
+      if (!solutions.has(solutionStr)) {
+        for (const con of this.cons) {
+          if (con.violated()) {
+            throw new Error(`constraint ${con.name} violated`);
           }
         }
 
-        // Backtrack to try next value
-        const state = stack[stack.length - 1];
-        this.unassignVar(state.variable);
-
-        // Restore pruned domains
-        for (const [var_, pruned] of state.pruned.entries()) {
-          var_.activeDomain.push(...pruned);
+        solutions.add(solutionStr);
+        if (printSolutions) {
+          printPipesGrid(currAssignment);
+          console.log(solutions.size);
+          console.log();
         }
+      }
+      return solutions.size;
+    }
 
-        // Move to next value in domain
-        state.domainIndex++;
-        state.pruned = new Map();
+    // get an unassigned variable to assign next using manhattan distance heuristic
+    const currVar = this.manhattanDistToConnection(randomStart);
 
-        // If we've tried all values, pop the state
-        if (state.domainIndex >= state.activeDomain.length) {
-          stack.pop();
-        }
+    // if the order should be randomized, shuffle the active domain such that assignments are chosen in a random order
+    const activeDomain = currVar.getActiveDomain();
+    if (randomStart) {
+      this.shuffle(activeDomain);
+    }
 
-        continue;
+    // try every active assignment for the variable
+    for (const assignment of activeDomain) {
+      // full snapshot of every variable's active domain, restored after this branch
+      const domainBackup = new Map<Variable, Openings[]>();
+      for (const v of this.vars) {
+        domainBackup.set(v, [...v.activeDomain]);
       }
 
-      // Get current state
-      const state = stack[stack.length - 1];
+      this.unassignVar(currVar);
+      this.assignVar(currVar, assignment);
 
-      // If we've tried all values in the domain, backtrack
-      if (state.domainIndex >= state.activeDomain.length) {
-        stack.pop();
-
-        // If stack not empty, restore variable and prepare for next value
-        if (stack.length > 0) {
-          const prevState = stack[stack.length - 1];
-          this.unassignVar(prevState.variable);
-
-          // Restore pruned domains
-          for (const [var_, pruned] of prevState.pruned.entries()) {
-            var_.activeDomain.push(...pruned);
-          }
-
-          // Move to next value
-          prevState.domainIndex++;
-          prevState.pruned = new Map();
-        }
-
-        continue;
-      }
-
-      // Try current value in domain
-      const assignment = state.activeDomain[state.domainIndex];
-
-      // Ensure variable is unassigned before assigning
-      this.unassignVar(state.variable);
-      this.assignVar(state.variable, assignment);
-
-      // Check if assignment leads to a dead end
-      const prunedDomains = this.ac3(this.getConsWithVar(state.variable));
+      // prune values and accumulate pruned values
+      const prunedDomains = this.ac3(this.getConsWithVar(currVar));
       let noActiveDomains = false;
-
-      for (const [var_, pruned] of prunedDomains.entries()) {
-        if (var_.getActiveDomain().length === 0) {
+      for (const v of prunedDomains.keys()) {
+        if (v.getActiveDomain().length === 0) {
           noActiveDomains = true;
           break;
         }
       }
 
-      // Update pruned domains in current state
-      state.pruned = prunedDomains;
-
-      if (noActiveDomains) {
-        // Restore domains and try next value
-        for (const [var_, pruned] of prunedDomains.entries()) {
-          var_.activeDomain.push(...pruned);
-        }
-        state.domainIndex++;
-        state.pruned = new Map();
-      } else if (this.unassignedVars.length > 0) {
-        // Check stack depth to prevent excessive recursion
-        if (stack.length >= maxStackDepth) {
-          console.warn(`Maximum stack depth reached (${maxStackDepth}). Backtracking...`);
-          // Force backtrack by treating this as no active domains
-          state.domainIndex++;
-          state.pruned = new Map();
-        } else {
-          // Move deeper in search tree
-          const nextVar = this.manhattanDistToConnection(randomStart);
-          const nextActiveDomain = [...nextVar.getActiveDomain()];
-
-          if (randomStart) {
-            this.shuffle(nextActiveDomain);
-          }
-
-          stack.push({
-            variable: nextVar,
-            domainIndex: 0,
-            activeDomain: nextActiveDomain,
-            pruned: new Map(),
-          });
-        }
+      // continue adding to solutions. Don't return so that all solutions are found.
+      if (!noActiveDomains) {
+        this.gacAll(solutions, maxSolutions, printSolutions, randomStart);
       }
-      // If unassignedVars is empty, loop will continue to solution handling
-    }
-    
-    // If we hit the iteration limit, log a warning
-    if (iterations >= maxIterations) {
-      console.warn(`GAC iteration limit reached (${maxIterations}). Search terminated early.`);
-      console.warn(`This may indicate an infinite loop or excessively large search space.`);
-      console.warn(`Consider using smaller board sizes or optimizing constraints.`);
-    }
 
+      // restore the active domains and try another value
+      for (const [v, pruned] of prunedDomains.entries()) {
+        v.activeDomain.push(...pruned);
+      }
+      for (const v of this.vars) {
+        v.activeDomain = domainBackup.get(v)!;
+      }
+
+      // stop trying further values once the attempt is out of time or done
+      if (this.timedOut) break;
+      if (maxSolutions !== -1 && solutions.size >= maxSolutions) break;
+    }
+    // if the code gets here, then all solutions for all assignments of this variable have been found.
+    // Backtrack and try another assignment for a variable that was assigned earlier.
+    this.unassignVar(currVar);
     return solutions.size;
   }
 
