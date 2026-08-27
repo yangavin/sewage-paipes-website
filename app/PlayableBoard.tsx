@@ -5,6 +5,7 @@ import {
   getPipeType,
   getPipeRotation as getPipeRotations,
   decodeStateStr,
+  isSolvedAssignment,
   scrambleState,
 } from "@/utils/Pipes";
 import { generateSolution } from "@/utils/csp/main";
@@ -18,10 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type PuzzleStatus = "playing" | "won" | "revealed";
+
 export default function PlayableBoard() {
   const [n, setN] = useState<number>(4);
   const [solution_str, setSolutionStr] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [puzzleStatus, setPuzzleStatus] =
+    useState<PuzzleStatus>("playing");
 
   // State for board management
   const [currentState, setCurrentState] = useState<Array<Array<boolean>>>([]);
@@ -33,6 +38,7 @@ export default function PlayableBoard() {
   useEffect(() => {
     const fetchSolution = async () => {
       setIsLoading(true);
+      setPuzzleStatus("playing");
       try {
         const newSolution = await generateSolution(n);
         setSolutionStr(newSolution);
@@ -58,10 +64,13 @@ export default function PlayableBoard() {
     setInitialState(scrambledState);
     setCurrentState(scrambledState);
     setRotationCounts(scrambledState.map((pipe) => getPipeRotations(pipe)));
+    setPuzzleStatus("playing");
     setIsLoading(false);
   }, [solution_str]);
 
   const handlePipeClick = (index: number) => {
+    if (puzzleStatus !== "playing") return;
+
     const newState = [...currentState];
     // Rotate the pipe at index
     newState[index] = [
@@ -76,20 +85,27 @@ export default function PlayableBoard() {
     const newRotationCounts = [...rotationCounts];
     newRotationCounts[index] = rotationCounts[index] + 1;
     setRotationCounts(newRotationCounts);
+
+    if (isSolvedAssignment(newState)) {
+      setPuzzleStatus("won");
+    }
   };
 
   const handleReset = () => {
     setCurrentState(initialState);
     setRotationCounts(initialState.map((pipe) => getPipeRotations(pipe)));
+    setPuzzleStatus("playing");
   };
 
   const handleShowSolution = () => {
     setCurrentState(solution);
     setRotationCounts(solution.map((pipe) => getPipeRotations(pipe)));
+    setPuzzleStatus("revealed");
   };
 
   const handleNewPuzzle = async () => {
     setIsLoading(true);
+    setPuzzleStatus("playing");
     try {
       const newSolution = await generateSolution(n);
       setSolutionStr(newSolution);
@@ -145,7 +161,7 @@ export default function PlayableBoard() {
             <Button
               variant="default"
               onClick={handleShowSolution}
-              disabled={isLoading}
+              disabled={isLoading || puzzleStatus !== "playing"}
               className="col-span-2 w-full gap-2 sm:col-span-1"
             >
               <span>💡</span>
@@ -172,9 +188,13 @@ export default function PlayableBoard() {
           </p>
         </div>
       ) : (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center">
           <div
-            className="inline-grid bg-card rounded-lg shadow-lg border-2 border-border overflow-hidden"
+            className={`inline-grid bg-card rounded-lg shadow-lg border-2 overflow-hidden transition-all duration-300 ${
+              puzzleStatus === "won"
+                ? "border-primary ring-4 ring-secondary"
+                : "border-border"
+            }`}
             style={{
               gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`,
@@ -186,10 +206,20 @@ export default function PlayableBoard() {
             {Array.from({ length: n * n }).map((_, index) => (
               <div
                 key={index}
-                className="border border-grid-line bg-background cursor-pointer hover:bg-accent/20 transition-all duration-200 relative group"
+                className={`border border-grid-line bg-background transition-all duration-200 relative group ${
+                  puzzleStatus === "playing"
+                    ? "cursor-pointer hover:bg-accent/20"
+                    : "cursor-default"
+                }`}
                 onClick={() => handlePipeClick(index)}
               >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-accent/10"></div>
+                <div
+                  className={`absolute inset-0 transition-opacity bg-accent/10 ${
+                    puzzleStatus === "playing"
+                      ? "opacity-0 group-hover:opacity-100"
+                      : "opacity-0"
+                  }`}
+                ></div>
                 <Image
                   src={`/type${getPipeType(currentState[index])}.svg`}
                   className="w-full h-full transition-transform duration-200 relative z-10"
@@ -203,6 +233,40 @@ export default function PlayableBoard() {
               </div>
             ))}
           </div>
+
+          {puzzleStatus === "won" && (
+            <div
+              className="bloom-in mt-6 w-full max-w-xl rounded-xl border-2 border-primary bg-secondary px-5 py-4 text-center shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-3xl" aria-hidden="true">
+                  🎉
+                </span>
+                <div className="text-left">
+                  <p className="font-semibold text-foreground">
+                    Puzzle solved!
+                  </p>
+                  <p className="handwritten text-lg text-muted-foreground">
+                    Every pipe is connected. Nicely done!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {puzzleStatus === "revealed" && (
+            <div
+              className="mt-6 w-full max-w-xl rounded-xl border border-border bg-accent/30 px-5 py-4 text-center shadow-sm"
+              role="status"
+            >
+              <p className="font-medium text-foreground">💡 Solution revealed</p>
+              <p className="handwritten text-lg text-muted-foreground">
+                Press Reset to try this puzzle yourself.
+              </p>
+            </div>
+          )}
         </div>
       )}
       
@@ -210,7 +274,9 @@ export default function PlayableBoard() {
       {!isLoading && solution_str && currentState.length === n * n && (
         <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground handwritten">
-            Click any pipe to rotate it. Connect them all!
+            {puzzleStatus === "playing"
+              ? "Click any pipe to rotate it. Connect them all!"
+              : "The board is locked — reset or start a new puzzle to play again."}
           </p>
         </div>
       )}

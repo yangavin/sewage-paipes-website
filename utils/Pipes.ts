@@ -3,6 +3,7 @@ import { runInference } from "@/app/ai/model";
 import { validator as connectedValidator } from "./csp/constraints/connected";
 import { validator as noCyclesValidator } from "./csp/constraints/no_cycles";
 import { validatorH, validatorV } from "./csp/constraints/no_half_connections";
+import type { Openings } from "./csp/utils";
 
 export function getPipeType(boolArray: Array<boolean>): string {
   // Count the number of true values
@@ -164,18 +165,25 @@ export function isSolved(boardState: Array<PipeInstance | null>) {
     throw new Error("Board is not full");
   }
 
-  if (boardState.length === 0) {
+  return isSolvedAssignment(boardState.map((pipe) => pipe.openings));
+}
+
+export function isSolvedAssignment(assignment: boolean[][]) {
+  if (
+    assignment.length === 0 ||
+    assignment.some((pipe) => pipe.length !== 4)
+  ) {
     return false;
   }
 
-  const assignment = boardState.map((pipe) => pipe.openings);
+  const pipes = assignment as Openings[];
   const boardSize = Math.sqrt(assignment.length);
 
   if (!Number.isInteger(boardSize)) {
     throw new Error("Board must be square");
   }
 
-  if (!connectedValidator(assignment) || !noCyclesValidator(assignment)) {
+  if (!connectedValidator(pipes) || !noCyclesValidator(pipes)) {
     return false;
   }
 
@@ -184,7 +192,7 @@ export function isSolved(boardState: Array<PipeInstance | null>) {
   for (let row = 0; row < boardSize; row++) {
     for (let column = 0; column < boardSize; column++) {
       const index = row * boardSize + column;
-      const pipe = assignment[index];
+      const pipe = pipes[index];
 
       // The Python solver excludes outward-facing pipes from edge domains.
       if (
@@ -198,14 +206,14 @@ export function isSolved(boardState: Array<PipeInstance | null>) {
 
       if (
         column < boardSize - 1 &&
-        !validatorH([pipe, assignment[index + 1]])
+        !validatorH([pipe, pipes[index + 1]])
       ) {
         return false;
       }
 
       if (
         row < boardSize - 1 &&
-        !validatorV([pipe, assignment[index + boardSize]])
+        !validatorV([pipe, pipes[index + boardSize]])
       ) {
         return false;
       }
