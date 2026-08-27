@@ -1,4 +1,4 @@
-import { PipeInstance } from "@/app/ai/BuildableBoard";
+import type { PipeInstance } from "@/app/ai/BuildableBoard";
 import { runInference } from "@/app/ai/model";
 import { validator as connectedValidator } from "./csp/constraints/connected";
 import { validator as noCyclesValidator } from "./csp/constraints/no_cycles";
@@ -163,15 +163,54 @@ export function isSolved(boardState: Array<PipeInstance | null>) {
   if (!boardState.every((pipe) => pipe !== null)) {
     throw new Error("Board is not full");
   }
-  // Convert to 2D array of booleans
-  const board2D = boardState.map((pipe) => {
-    return pipe.openings;
-  });
 
-  return [
-    connectedValidator(board2D),
-    noCyclesValidator(board2D),
-    validatorH(board2D),
-    validatorV(board2D),
-  ].every((validator) => validator);
+  if (boardState.length === 0) {
+    return false;
+  }
+
+  const assignment = boardState.map((pipe) => pipe.openings);
+  const boardSize = Math.sqrt(assignment.length);
+
+  if (!Number.isInteger(boardSize)) {
+    throw new Error("Board must be square");
+  }
+
+  if (!connectedValidator(assignment) || !noCyclesValidator(assignment)) {
+    return false;
+  }
+
+  // The half-connection validators are binary constraints. Mirror the Python
+  // CSP and apply each one to every horizontal and vertical pair in its scope.
+  for (let row = 0; row < boardSize; row++) {
+    for (let column = 0; column < boardSize; column++) {
+      const index = row * boardSize + column;
+      const pipe = assignment[index];
+
+      // The Python solver excludes outward-facing pipes from edge domains.
+      if (
+        (row === 0 && pipe[0]) ||
+        (column === boardSize - 1 && pipe[1]) ||
+        (row === boardSize - 1 && pipe[2]) ||
+        (column === 0 && pipe[3])
+      ) {
+        return false;
+      }
+
+      if (
+        column < boardSize - 1 &&
+        !validatorH([pipe, assignment[index + 1]])
+      ) {
+        return false;
+      }
+
+      if (
+        row < boardSize - 1 &&
+        !validatorV([pipe, assignment[index + boardSize]])
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
