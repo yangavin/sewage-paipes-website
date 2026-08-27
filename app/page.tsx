@@ -1,4 +1,5 @@
 import PlayableBoard from "./PlayableBoard";
+import AiSolverSection from "./ai/AiSolverSection";
 
 export default function Home() {
   return (
@@ -27,7 +28,7 @@ export default function Home() {
       </section>
 
       {/* Puzzle Section */}
-      <section className="py-16 px-4 bg-card/50">
+      <section id="play" className="py-16 px-4 bg-card/50 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="mb-4">Play the Puzzle</h2>
@@ -37,6 +38,13 @@ export default function Home() {
             </p>
           </div>
           <PlayableBoard />
+        </div>
+      </section>
+
+      {/* AI Solver Section */}
+      <section id="ai-solver" className="py-16 px-4 scroll-mt-20">
+        <div className="max-w-6xl mx-auto">
+          <AiSolverSection />
         </div>
       </section>
     </>
