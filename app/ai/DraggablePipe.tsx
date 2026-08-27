@@ -23,17 +23,19 @@ export default function DraggablePipe({
     () => ({
       type: "PIPE",
       item: { pipe: [...pipe] },
+      canDrag: !isSolving,
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
       }),
     }),
-    [pipe, rotations]
+    [pipe, rotations, isSolving]
   );
   const ref = useRef<HTMLDivElement>(null);
   dragRef(ref);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isSolving) return;
     onDelete();
   };
 
@@ -46,7 +48,8 @@ export default function DraggablePipe({
   const pipeType = getPipeType(pipe);
   return (
     <div
-      ref={!isSolving ? ref : null}
+      ref={ref}
+      className="h-full w-full"
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
@@ -54,6 +57,7 @@ export default function DraggablePipe({
         src={`/type${pipeType}.svg`}
         className="w-full h-full transition-transform duration-200"
         alt={`Pipe type ${pipeType}`}
+        draggable={false}
         style={{
           transform: `rotate(${rotations * 90}deg)`,
           opacity: isDragging ? 0.5 : 1,

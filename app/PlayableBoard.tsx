@@ -102,9 +102,9 @@ export default function PlayableBoard() {
   return (
     <div className="w-full">
       {/* Controls Section */}
-      <div className="bg-card rounded-xl p-6 mb-8 shadow-sm border border-border">
+      <div className="bg-card rounded-xl p-4 sm:p-6 mb-8 shadow-sm border border-border">
         <div className="flex flex-col md:flex-row justify-center items-center gap-6">
-          <div className="flex items-center gap-3">
+          <div className="flex w-full sm:w-auto items-center justify-center gap-3">
             <span className="text-sm font-medium text-muted-foreground">Canvas Size:</span>
             <Select
               value={String(n)}
@@ -123,12 +123,12 @@ export default function PlayableBoard() {
             </Select>
           </div>
           
-          <div className="flex gap-3">
+          <div className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:grid-cols-3">
             <Button
               variant="outline"
               onClick={handleNewPuzzle}
               disabled={isLoading}
-              className="gap-2"
+              className="w-full gap-2"
             >
               <span>🎲</span>
               New Puzzle
@@ -137,7 +137,7 @@ export default function PlayableBoard() {
               variant="outline" 
               onClick={handleReset} 
               disabled={isLoading}
-              className="gap-2"
+              className="w-full gap-2"
             >
               <span>🔄</span>
               Reset
@@ -146,7 +146,7 @@ export default function PlayableBoard() {
               variant="default"
               onClick={handleShowSolution}
               disabled={isLoading}
-              className="gap-2"
+              className="col-span-2 w-full gap-2 sm:col-span-1"
             >
               <span>💡</span>
               Show Solution

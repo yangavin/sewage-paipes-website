@@ -45,6 +45,9 @@ export default function BuildableBoard() {
   }>({});
   const [isSolving, setIsSolving] = useState(false);
   const [moveCount, setMoveCount] = useState(0);
+  const [selectedPipeIndex, setSelectedPipeIndex] = useState<number | null>(
+    null
+  );
 
   const handlePipeTurn = useCallback(
     (index: number) => {
@@ -104,10 +107,12 @@ export default function BuildableBoard() {
   const noEmpties = boardState.every((pipe) => pipe !== null);
 
   const handleClearBoard = () => {
+    if (isSolving) return;
     setBoardState(Array(16).fill(null));
   };
 
   const handleDeletePipe = (index: number) => {
+    if (isSolving) return;
     setBoardState((prevState) => {
       const newState = [...prevState];
       newState[index] = null;
@@ -116,6 +121,7 @@ export default function BuildableBoard() {
   };
 
   const handleReplacePipe = (index: number, pipe: Openings) => {
+    if (isSolving) return;
     setBoardState((prevState) => {
       const newState = [...prevState];
       const rotations = getPipeRotation(pipe);
@@ -132,6 +138,7 @@ export default function BuildableBoard() {
     if (!isSolving) {
       setAttemptedMoves({});
       setMoveCount(0);
+      setSelectedPipeIndex(null);
     }
     setIsSolving(!isSolving);
   };
@@ -149,12 +156,20 @@ export default function BuildableBoard() {
               return (
                 <div
                   key={i}
-                  className="border-2 border-grid-line bg-background rounded-md overflow-hidden hover:border-primary transition-colors"
+                  className={`aspect-square min-w-0 flex-1 max-w-28 border-2 bg-background rounded-md overflow-hidden hover:border-primary transition-colors touch-manipulation ${
+                    selectedPipeIndex === i
+                      ? "border-primary ring-2 ring-primary/30 bg-accent/30"
+                      : "border-grid-line"
+                  }`}
                 >
                   <DraggablePipe
                     pipe={[...openings]}
                     rotations={0}
-                    onTurn={() => {}}
+                    onTurn={() =>
+                      setSelectedPipeIndex((selectedIndex) =>
+                        selectedIndex === i ? null : i
+                      )
+                    }
                     onDelete={() => {}}
                     isSolving={isSolving}
                   />
@@ -163,8 +178,13 @@ export default function BuildableBoard() {
             })}
           </div>
           <p className="text-sm text-muted-foreground text-center mt-3 handwritten">
-            Drag these pipes onto the board below
+            Drag a pipe, or tap one and then tap board tiles to place it
           </p>
+          {selectedPipeIndex !== null && (
+            <p className="text-xs text-primary text-center mt-1 handwritten">
+              Pipe selected — tap it again when you want to rotate board pipes
+            </p>
+          )}
         </div>
 
         {/* Board */}
@@ -183,6 +203,14 @@ export default function BuildableBoard() {
               <DroppableBox
                 key={index}
                 onDrop={(pipe: Openings) => handleReplacePipe(index, pipe)}
+                onClick={() => {
+                  if (
+                    pipeInstance === null &&
+                    selectedPipeIndex !== null
+                  ) {
+                    handleReplacePipe(index, PIPES[selectedPipeIndex]);
+                  }
+                }}
                 isSolving={isSolving}
               >
                 {pipeInstance && (
@@ -190,7 +218,13 @@ export default function BuildableBoard() {
                     key={pipeInstance.id}
                     pipe={pipeInstance.openings}
                     rotations={pipeInstance.rotations}
-                    onTurn={() => handlePipeTurn(index)}
+                    onTurn={() => {
+                      if (selectedPipeIndex === null) {
+                        handlePipeTurn(index);
+                      } else {
+                        handleReplacePipe(index, PIPES[selectedPipeIndex]);
+                      }
+                    }}
                     onDelete={() => handleDeletePipe(index)}
                     isSolving={isSolving}
                   />
@@ -221,11 +255,11 @@ export default function BuildableBoard() {
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <GripHorizontal className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>Drag pipes from above onto the board</span>
+                  <span>Drag pipes, or tap a type then tap board tiles</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <MousePointerClick className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>Left-click a pipe to rotate it</span>
+                  <span>Tap or click a placed pipe to rotate it</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Trash2 className="h-4 w-4 mt-0.5 flex-shrink-0" />

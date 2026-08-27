@@ -1,5 +1,7 @@
 import PlayableBoard from "./PlayableBoard";
 import AiSolverSection from "./ai/AiSolverSection";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, FileText } from "lucide-react";
 
 export default function Home() {
   return (
@@ -23,6 +25,19 @@ export default function Home() {
             <p className="handwritten text-2xl text-foreground mt-8">
               Every pipe has a purpose
             </p>
+            <div className="pt-2">
+              <Button asChild variant="outline" size="lg">
+                <a
+                  href="https://drive.google.com/file/d/1nAALKDSmRvLRF1EKkZxdUTLBAGwa15Zi/view"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText />
+                  Read the technical report
+                  <ExternalLink className="size-3.5 opacity-60" />
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
