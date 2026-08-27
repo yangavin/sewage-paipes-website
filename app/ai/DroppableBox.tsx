@@ -4,23 +4,23 @@ import { Openings } from "@/utils/csp/utils";
 
 interface DroppableBoxProp {
   children?: React.ReactNode;
-  isSolving: boolean;
+  isLocked: boolean;
   onDrop: (pipe: Openings) => void;
   onClick?: () => void;
 }
 
 export default function DroppableBox({
   children,
-  isSolving,
+  isLocked,
   onDrop,
   onClick,
 }: DroppableBoxProp) {
   const [{ isOver }, drop] = useDrop(
     () => ({
       accept: "PIPE",
-      canDrop: () => !isSolving,
+      canDrop: () => !isLocked,
       drop: ({ pipe }: { pipe: Openings }) => {
-        if (!isSolving) {
+        if (!isLocked) {
           onDrop(pipe);
         }
       },
@@ -28,12 +28,12 @@ export default function DroppableBox({
         isOver: monitor.isOver() && monitor.canDrop(),
       }),
     }),
-    [isSolving, onDrop]
+    [isLocked, onDrop]
   );
   const ref = useRef<HTMLDivElement>(null);
   drop(ref);
 
-  const bgColor = isSolving
+  const bgColor = isLocked
     ? "bg-muted/50"
     : isOver
     ? "bg-accent/40"
@@ -42,21 +42,21 @@ export default function DroppableBox({
   return (
     <div
       className={`border border-grid-line ${bgColor} ${
-        !isSolving
+        !isLocked
           ? "cursor-pointer hover:bg-accent/20"
           : "cursor-not-allowed"
       } transition-all duration-200 relative group`}
       ref={ref}
       onContextMenu={(e) => e.preventDefault()}
       onClick={() => {
-        if (!isSolving) {
+        if (!isLocked) {
           onClick?.();
         }
       }}
-      aria-disabled={isSolving}
+      aria-disabled={isLocked}
     >
       {children}
-      {isSolving && (
+      {isLocked && (
         <div className="absolute inset-0 z-10 bg-black/10 pointer-events-none" />
       )}
     </div>

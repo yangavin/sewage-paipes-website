@@ -16,8 +16,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  PauseCircle,
   PlayCircle,
-  StopCircle,
+  RotateCcw,
   Trash2,
   RotateCw,
   MousePointerClick,
@@ -36,6 +37,28 @@ export interface PipeInstance {
   rotations: number;
 }
 
+type SolverStatus =
+  | "editing"
+  | "solving"
+  | "paused"
+  | "solved"
+  | "unsolvable";
+
+const MAX_SOLVER_MOVES = 50;
+
+function cloneBoard(
+  board: Array<PipeInstance | null>
+): Array<PipeInstance | null> {
+  return board.map((pipe) =>
+    pipe === null
+      ? null
+      : {
+          ...pipe,
+          openings: [...pipe.openings],
+        }
+  );
+}
+
 export default function BuildableBoard() {
   const [boardState, setBoardState] = useState<Array<PipeInstance | null>>(() =>
     Array(16).fill(null)
@@ -44,11 +67,17 @@ export default function BuildableBoard() {
   const [attemptedMoves, setAttemptedMoves] = useState<{
     [key: string]: number[];
   }>({});
-  const [isSolving, setIsSolving] = useState(false);
+  const [solverStatus, setSolverStatus] =
+    useState<SolverStatus>("editing");
+  const [sessionStartBoard, setSessionStartBoard] = useState<
+    Array<PipeInstance | null> | null
+  >(null);
   const [moveCount, setMoveCount] = useState(0);
   const [selectedPipeIndex, setSelectedPipeIndex] = useState<number | null>(
     null
   );
+  const isSolving = solverStatus === "solving";
+  const isBoardLocked = isSolving || solverStatus === "paused";
 
   useEffect(() => {
     void preloadModel().catch((error) => {
@@ -56,10 +85,8 @@ export default function BuildableBoard() {
     });
   }, []);
 
-  const handlePipeTurn = useCallback(
+  const turnPipe = useCallback(
     (index: number) => {
-      console.log("TURNING: ", index);
-      if (boardState[index] === null) return;
       setBoardState((prevState) => {
         const newState = [...prevState];
         const currentPipe = prevState[index];
@@ -77,7 +104,7 @@ export default function BuildableBoard() {
         return newState;
       });
     },
-    [boardState]
+    []
   );
 
   useEffect(() => {
@@ -86,21 +113,28 @@ export default function BuildableBoard() {
     // already done?
     if (isSolved(boardState)) {
       console.log("SOLVED:", boardState);
-      setIsSolving(false);
+      setSolverStatus("solved");
+      setAttemptedMoves({});
+      return;
+    }
+
+    if (moveCount >= MAX_SOLVER_MOVES) {
+      setSolverStatus("unsolvable");
       setAttemptedMoves({});
       return;
     }
 
     // run ONE move, then let the next render/effect decide again
     let cancelled = false;
+    let moveTimer: ReturnType<typeof setTimeout> | null = null;
     (async () => {
       const output = await pickMove(boardState, attemptedMoves);
       if (cancelled) return; // board changed meanwhile – abort
 
-      setTimeout(() => {
+      moveTimer = setTimeout(() => {
         if (cancelled) return;
         setAttemptedMoves(output.attemptedMoves);
-        handlePipeTurn(output.move); // triggers next render
+        turnPipe(output.move); // triggers next render
         setMoveCount((prev) => prev + 1);
       }, 200);
     })();
@@ -108,27 +142,35 @@ export default function BuildableBoard() {
     // if boardState or isSolving changes before pickMove resolves, abort
     return () => {
       cancelled = true;
+      if (moveTimer !== null) {
+        clearTimeout(moveTimer);
+      }
     };
-  }, [isSolving, boardState, attemptedMoves, handlePipeTurn]); // deps
+  }, [isSolving, boardState, attemptedMoves, moveCount, turnPipe]);
 
   const noEmpties = boardState.every((pipe) => pipe !== null);
 
   const handleClearBoard = () => {
-    if (isSolving) return;
+    if (isBoardLocked) return;
     setBoardState(Array(16).fill(null));
+    setAttemptedMoves({});
+    setMoveCount(0);
+    setSolverStatus("editing");
   };
 
   const handleDeletePipe = (index: number) => {
-    if (isSolving) return;
+    if (isBoardLocked) return;
     setBoardState((prevState) => {
       const newState = [...prevState];
       newState[index] = null;
       return newState;
     });
+    setAttemptedMoves({});
+    setSolverStatus("editing");
   };
 
   const handleReplacePipe = (index: number, pipe: Openings) => {
-    if (isSolving) return;
+    if (isBoardLocked) return;
     setBoardState((prevState) => {
       const newState = [...prevState];
       const rotations = getPipeRotation(pipe);
@@ -139,15 +181,43 @@ export default function BuildableBoard() {
       };
       return newState;
     });
+    setAttemptedMoves({});
+    setSolverStatus("editing");
   };
 
-  const handleSolveToggle = () => {
-    if (!isSolving) {
-      setAttemptedMoves({});
-      setMoveCount(0);
-      setSelectedPipeIndex(null);
+  const handleUserPipeTurn = (index: number) => {
+    if (isBoardLocked) return;
+    turnPipe(index);
+    setAttemptedMoves({});
+    setSolverStatus("editing");
+  };
+
+  const handleSolverControl = () => {
+    if (solverStatus === "solving") {
+      setSolverStatus("paused");
+      return;
     }
-    setIsSolving(!isSolving);
+
+    if (solverStatus === "paused") {
+      setSolverStatus("solving");
+      return;
+    }
+
+    setSessionStartBoard(cloneBoard(boardState));
+    setAttemptedMoves({});
+    setMoveCount(0);
+    setSelectedPipeIndex(null);
+    setSolverStatus("solving");
+  };
+
+  const handleSessionReset = () => {
+    if (sessionStartBoard === null || isSolving) return;
+
+    setBoardState(cloneBoard(sessionStartBoard));
+    setAttemptedMoves({});
+    setMoveCount(0);
+    setSelectedPipeIndex(null);
+    setSolverStatus("editing");
   };
 
   return (
@@ -178,7 +248,7 @@ export default function BuildableBoard() {
                       )
                     }
                     onDelete={() => {}}
-                    isSolving={isSolving}
+                    isLocked={isBoardLocked}
                   />
                 </div>
               );
@@ -218,7 +288,7 @@ export default function BuildableBoard() {
                     handleReplacePipe(index, PIPES[selectedPipeIndex]);
                   }
                 }}
-                isSolving={isSolving}
+                isLocked={isBoardLocked}
               >
                 {pipeInstance && (
                   <DraggablePipe
@@ -227,13 +297,13 @@ export default function BuildableBoard() {
                     rotations={pipeInstance.rotations}
                     onTurn={() => {
                       if (selectedPipeIndex === null) {
-                        handlePipeTurn(index);
+                        handleUserPipeTurn(index);
                       } else {
                         handleReplacePipe(index, PIPES[selectedPipeIndex]);
                       }
                     }}
                     onDelete={() => handleDeletePipe(index)}
-                    isSolving={isSolving}
+                    isLocked={isBoardLocked}
                   />
                 )}
               </DroppableBox>
@@ -291,12 +361,17 @@ export default function BuildableBoard() {
                   className="flex-1"
                   disabled={!noEmpties}
                   variant={isSolving ? "outline" : "default"}
-                  onClick={handleSolveToggle}
+                  onClick={handleSolverControl}
                 >
                   {isSolving ? (
                     <>
-                      <StopCircle className="mr-2 h-4 w-4" />
-                      Stop
+                      <PauseCircle className="mr-2 h-4 w-4" />
+                      Pause
+                    </>
+                  ) : solverStatus === "paused" ? (
+                    <>
+                      <PlayCircle className="mr-2 h-4 w-4" />
+                      Continue
                     </>
                   ) : (
                     <>
@@ -306,14 +381,48 @@ export default function BuildableBoard() {
                   )}
                 </Button>
                 <Button
+                  variant="outline"
+                  disabled={sessionStartBoard === null || isSolving}
+                  onClick={handleSessionReset}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+                <Button
                   variant="destructive"
-                  disabled={isSolving}
+                  disabled={isBoardLocked}
                   onClick={handleClearBoard}
                   size="icon"
+                  aria-label="Clear board"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+              {solverStatus === "paused" && (
+                <p className="text-xs text-muted-foreground mt-3 text-center handwritten">
+                  Paused — continue solving or reset to the starting board.
+                </p>
+              )}
+              {solverStatus === "solved" && (
+                <p className="text-xs text-primary mt-3 text-center handwritten">
+                  Solved in {moveCount} moves!
+                </p>
+              )}
+              {solverStatus === "unsolvable" && (
+                <div
+                  className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-center"
+                  role="status"
+                >
+                  <p className="text-sm font-semibold text-destructive">
+                    This puzzle is unsolvable
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground handwritten">
+                    The solver stopped after {MAX_SOLVER_MOVES} moves.
+                    <br />
+                    Edit the board or reset it to try again.
+                  </p>
+                </div>
+              )}
               {!noEmpties && (
                 <p className="text-xs text-muted-foreground mt-3 text-center handwritten">
                   Fill the board to start solving!

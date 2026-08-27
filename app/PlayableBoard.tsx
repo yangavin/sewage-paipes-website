@@ -206,18 +206,19 @@ export default function PlayableBoard() {
             {Array.from({ length: n * n }).map((_, index) => (
               <div
                 key={index}
-                className={`border border-grid-line bg-background transition-all duration-200 relative group ${
+                className={`border border-grid-line transition-all duration-200 relative group ${
                   puzzleStatus === "playing"
-                    ? "cursor-pointer hover:bg-accent/20"
-                    : "cursor-default"
+                    ? "bg-background cursor-pointer hover:bg-accent/20"
+                    : "bg-muted/50 cursor-not-allowed"
                 }`}
                 onClick={() => handlePipeClick(index)}
+                aria-disabled={puzzleStatus !== "playing"}
               >
                 <div
-                  className={`absolute inset-0 transition-opacity bg-accent/10 ${
+                  className={`absolute inset-0 z-20 pointer-events-none transition-opacity ${
                     puzzleStatus === "playing"
-                      ? "opacity-0 group-hover:opacity-100"
-                      : "opacity-0"
+                      ? "bg-accent/10 opacity-0 group-hover:opacity-100"
+                      : "bg-black/10 opacity-100"
                   }`}
                 ></div>
                 <Image
@@ -276,7 +277,7 @@ export default function PlayableBoard() {
           <p className="text-sm text-muted-foreground handwritten">
             {puzzleStatus === "playing"
               ? "Click any pipe to rotate it. Connect them all!"
-              : "The board is locked — reset or start a new puzzle to play again."}
+              : "Reset or start a new puzzle to play again."}
           </p>
         </div>
       )}

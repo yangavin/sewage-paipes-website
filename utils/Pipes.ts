@@ -135,26 +135,29 @@ export async function pickMove(
 ) {
   const encodedState = encodeBoardState(boardState);
   const output = await runInference(encodedState);
+  const nextAttemptedMoves = Object.fromEntries(
+    Object.entries(attemptedMoves).map(([state, moves]) => [state, [...moves]])
+  );
   // sort by greatest to least
   const sortedOutput = [...output].sort((a, b) => b - a);
 
   for (let i = 0; i < sortedOutput.length; i++) {
     const move = output.indexOf(sortedOutput[i]);
-    const triedMoves = attemptedMoves[String(encodedState)];
+    const triedMoves = nextAttemptedMoves[String(encodedState)];
     if (triedMoves && triedMoves.includes(i)) {
       continue;
     }
 
     // add the move to attmpted moves in the correct state
     if (triedMoves) {
-      attemptedMoves[String(encodedState)].push(i);
+      nextAttemptedMoves[String(encodedState)].push(i);
     } else {
-      attemptedMoves[String(encodedState)] = [i];
+      nextAttemptedMoves[String(encodedState)] = [i];
     }
 
     return {
       move,
-      attemptedMoves: { ...attemptedMoves },
+      attemptedMoves: nextAttemptedMoves,
     };
   }
   throw new Error("No valid moves found");

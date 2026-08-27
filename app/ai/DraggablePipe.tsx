@@ -7,7 +7,7 @@ import { Openings } from "@/utils/csp/utils";
 interface DraggablePipeProps {
   pipe: Openings;
   rotations: number;
-  isSolving: boolean;
+  isLocked: boolean;
   onTurn: () => void;
   onDelete: () => void;
 }
@@ -15,7 +15,7 @@ interface DraggablePipeProps {
 export default function DraggablePipe({
   pipe,
   rotations,
-  isSolving,
+  isLocked,
   onTurn,
   onDelete,
 }: DraggablePipeProps) {
@@ -23,25 +23,25 @@ export default function DraggablePipe({
     () => ({
       type: "PIPE",
       item: { pipe: [...pipe] },
-      canDrag: !isSolving,
+      canDrag: !isLocked,
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
       }),
     }),
-    [pipe, rotations, isSolving]
+    [pipe, rotations, isLocked]
   );
   const ref = useRef<HTMLDivElement>(null);
   dragRef(ref);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isSolving) return;
+    if (isLocked) return;
     onDelete();
   };
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isSolving) return;
+    if (isLocked) return;
     onTurn();
   };
 
