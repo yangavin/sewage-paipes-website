@@ -1,12 +1,32 @@
 import * as ort from "onnxruntime-web";
 
+let sessionPromise: Promise<ort.InferenceSession> | null = null;
+
+export function preloadModel(): Promise<ort.InferenceSession> {
+  if (sessionPromise !== null) {
+    return sessionPromise;
+  }
+
+  const pendingSession = ort.InferenceSession.create("/model.onnx").catch(
+    (error: unknown) => {
+      // Allow a later attempt to retry if the initial background load fails.
+      if (sessionPromise === pendingSession) {
+        sessionPromise = null;
+      }
+      throw error;
+    }
+  );
+
+  sessionPromise = pendingSession;
+  return pendingSession;
+}
+
 export async function runInference(inputArray: number[]): Promise<number[]> {
   if (inputArray.length !== 64) {
     throw new Error("Input array must have exactly 64 floats.");
   }
 
-  // Load the model
-  const session = await ort.InferenceSession.create("/model.onnx");
+  const session = await preloadModel();
 
   // Prepare input tensor
   const tensor = new ort.Tensor(

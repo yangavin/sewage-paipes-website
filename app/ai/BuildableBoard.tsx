@@ -6,6 +6,7 @@ import DroppableBox from "./DroppableBox";
 import DraggablePipe from "./DraggablePipe";
 import { Openings } from "@/utils/csp/utils";
 import { getPipeRotation, isSolved, pickMove } from "@/utils/Pipes";
+import { preloadModel } from "./model";
 import { v4 as uuidv4 } from "uuid";
 import {
   Card,
@@ -48,6 +49,12 @@ export default function BuildableBoard() {
   const [selectedPipeIndex, setSelectedPipeIndex] = useState<number | null>(
     null
   );
+
+  useEffect(() => {
+    void preloadModel().catch((error) => {
+      console.error("Failed to preload the AI model:", error);
+    });
+  }, []);
 
   const handlePipeTurn = useCallback(
     (index: number) => {
