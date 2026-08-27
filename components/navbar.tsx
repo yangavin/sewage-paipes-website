@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+
+function scrollToSection(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
+  e.preventDefault();
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
 
 export function Navbar() {
-  const pathname = usePathname();
-
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-6xl mx-auto flex h-20 items-center justify-between px-4">
@@ -16,32 +17,22 @@ export function Navbar() {
             Pipe Puzzle
           </span>
         </Link>
-        
+
         <div className="flex items-center gap-8">
-          <Link
-            href="/"
-            className={cn(
-              "text-base font-medium transition-all hover:text-primary relative",
-              pathname === "/" ? "text-foreground" : "text-muted-foreground"
-            )}
+          <a
+            href="#play"
+            onClick={(e) => scrollToSection(e, "play")}
+            className="text-base font-medium text-muted-foreground transition-all hover:text-primary"
           >
             Play
-            {pathname === "/" && (
-              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-primary rounded-full" />
-            )}
-          </Link>
-          <Link
-            href="/ai"
-            className={cn(
-              "text-base font-medium transition-all hover:text-primary relative",
-              pathname === "/ai" ? "text-foreground" : "text-muted-foreground"
-            )}
+          </a>
+          <a
+            href="#ai-solver"
+            onClick={(e) => scrollToSection(e, "ai-solver")}
+            className="text-base font-medium text-muted-foreground transition-all hover:text-primary"
           >
             AI Solver
-            {pathname === "/ai" && (
-              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-primary rounded-full" />
-            )}
-          </Link>
+          </a>
         </div>
       </div>
     </nav>
