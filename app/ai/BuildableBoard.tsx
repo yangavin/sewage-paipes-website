@@ -23,6 +23,7 @@ import {
   RotateCw,
   MousePointerClick,
   GripHorizontal,
+  Info,
 } from "lucide-react";
 
 const PIPES: Openings[] = [
@@ -345,6 +346,25 @@ export default function BuildableBoard() {
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <RotateCw className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span>Drag between squares to copy pipes</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm font-medium text-primary">
+                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Tip: not every layout is{" "}
+                    <span className="group relative inline-block">
+                      <span
+                        tabIndex={0}
+                        className="cursor-help underline decoration-dotted decoration-2 underline-offset-2 focus:outline-none"
+                      >
+                        solvable
+                      </span>
+                      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-md border border-border bg-popover px-3 py-2 text-xs normal-case text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                        A solvable puzzle is one where every pipe connects,
+                        with no loops.
+                      </span>
+                    </span>
+                    . Build a solved board, then scramble it
+                  </span>
                 </li>
               </ul>
             </div>
