@@ -20,9 +20,10 @@ import {
   PlayCircle,
   RotateCcw,
   Trash2,
-  RotateCw,
   MousePointerClick,
   GripHorizontal,
+  Activity,
+  Layers3,
 } from "lucide-react";
 
 const PIPES: Openings[] = [
@@ -63,7 +64,6 @@ export default function BuildableBoard() {
   const [boardState, setBoardState] = useState<Array<PipeInstance | null>>(() =>
     Array(16).fill(null)
   );
-  console.log(boardState);
   const [attemptedMoves, setAttemptedMoves] = useState<{
     [key: string]: number[];
   }>({});
@@ -112,7 +112,6 @@ export default function BuildableBoard() {
 
     // already done?
     if (isSolved(boardState)) {
-      console.log("SOLVED:", boardState);
       setSolverStatus("solved");
       setAttemptedMoves({});
       return;
@@ -149,6 +148,16 @@ export default function BuildableBoard() {
   }, [isSolving, boardState, attemptedMoves, moveCount, turnPipe]);
 
   const noEmpties = boardState.every((pipe) => pipe !== null);
+  const placedPipeCount = boardState.filter((pipe) => pipe !== null).length;
+  const solverDescription = {
+    editing: noEmpties
+      ? "Board complete. The model is ready."
+      : `Place ${16 - placedPipeCount} more ${16 - placedPipeCount === 1 ? "tile" : "tiles"} to activate the model.`,
+    solving: "Evaluating the network one move at a time.",
+    paused: "Inference paused. Continue when you are ready.",
+    solved: `Network solved in ${moveCount} moves.`,
+    unsolvable: "No valid network found within the move limit.",
+  }[solverStatus];
 
   const handleClearBoard = () => {
     if (isBoardLocked) return;
@@ -221,22 +230,28 @@ export default function BuildableBoard() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-12 justify-center items-center">
-      <div className="w-full lg:w-1/2">
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10">
+      <div className="w-full rounded-3xl border border-border bg-card/70 p-4 shadow-sm sm:p-7">
         {/* Pipe Palette */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-lg font-semibold">Pipe Types</h3>
+        <div className="mb-7">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
+                <Layers3 className="size-3.5" /> Components
+              </div>
+              <h3 className="text-xl">Pipe palette</h3>
+            </div>
+            <span className="hidden text-xs text-muted-foreground sm:block">Select, place, rotate</span>
           </div>
-          <div className="flex gap-2 justify-center bg-card rounded-lg p-4 border-2 border-border shadow-sm">
+          <div className="flex justify-center gap-2 rounded-2xl border border-border bg-[#ebe8de] p-3 sm:gap-3 sm:p-4">
             {PIPES.map((openings, i) => {
               return (
                 <div
                   key={i}
-                  className={`aspect-square min-w-0 flex-1 max-w-28 border-2 bg-background rounded-md overflow-hidden hover:border-primary transition-colors touch-manipulation ${
+                  className={`aspect-square min-w-0 flex-1 max-w-28 touch-manipulation overflow-hidden rounded-xl border bg-card transition-all hover:-translate-y-0.5 hover:border-primary ${
                     selectedPipeIndex === i
-                      ? "border-primary ring-2 ring-primary/30 bg-accent/30"
-                      : "border-grid-line"
+                      ? "border-primary ring-4 ring-primary/10 bg-primary/5 shadow-md"
+                      : "border-border shadow-sm"
                   }`}
                 >
                   <DraggablePipe
@@ -254,11 +269,11 @@ export default function BuildableBoard() {
               );
             })}
           </div>
-          <p className="text-sm text-muted-foreground text-center mt-3 handwritten">
+          <p className="mt-3 text-center text-xs text-muted-foreground">
             Drag a pipe, or tap one and then tap board tiles to place it
           </p>
           {selectedPipeIndex !== null && (
-            <p className="text-xs text-primary text-center mt-1 handwritten">
+            <p className="mt-1 text-center font-mono text-[10px] uppercase tracking-[0.08em] text-primary">
               Pipe selected — tap it again when you want to rotate board pipes
             </p>
           )}
@@ -266,8 +281,9 @@ export default function BuildableBoard() {
 
         {/* Board */}
         <div className="flex justify-center">
-          <div
-            className="inline-grid bg-card rounded-lg shadow-lg border-2 border-border overflow-hidden"
+          <div className="w-full max-w-[524px] rounded-2xl bg-foreground p-2 shadow-xl sm:p-3">
+            <div
+            className="inline-grid w-full overflow-hidden rounded-xl border border-white/15 bg-card"
             style={{
               gridTemplateColumns: `repeat(${4}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${4}, minmax(0, 1fr))`,
@@ -279,6 +295,7 @@ export default function BuildableBoard() {
             {boardState.map((pipeInstance, index) => (
               <DroppableBox
                 key={index}
+                label={`Board tile ${index + 1}${pipeInstance ? ", occupied" : ", empty"}`}
                 onDrop={(pipe: Openings) => handleReplacePipe(index, pipe)}
                 onClick={() => {
                   if (
@@ -308,52 +325,56 @@ export default function BuildableBoard() {
                 )}
               </DroppableBox>
             ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full lg:w-1/3">
-        <Card className="sticky top-24">
-          <CardHeader>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">🧠</span>
-              <CardTitle>AI Solver</CardTitle>
+      <div className="w-full">
+        <Card className="sticky top-24 overflow-hidden border-border/80 shadow-xl shadow-foreground/5 hover:shadow-xl">
+          <CardHeader className="bg-foreground text-background">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-secondary">
+                <Activity className="size-3.5" /> Model status
+              </div>
+              <span className="rounded-md bg-white/10 px-2 py-1 font-mono text-[9px] tracking-[0.08em] text-white/65">
+                {placedPipeCount}/16
+              </span>
             </div>
-            <CardDescription>
-              Create a pipe puzzle and watch the AI solve it step by step
+            <CardTitle className="text-2xl text-white">Solver console</CardTitle>
+            <CardDescription className="text-white/55">
+              {solverDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
-                <span>📖</span>
-                Instructions
+            <div className="pt-6">
+              <h3 className="mb-4 text-sm font-semibold tracking-normal">
+                Workspace controls
               </h3>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <GripHorizontal className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted"><GripHorizontal className="size-3.5" /></span>
                   <span>Drag pipes, or tap a type then tap board tiles</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <MousePointerClick className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted"><MousePointerClick className="size-3.5" /></span>
                   <span>Tap or click a placed pipe to rotate it</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <Trash2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted"><Trash2 className="size-3.5" /></span>
                   <span>Right-click a pipe to remove it</span>
-                </li>
-                <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <RotateCw className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>Drag between squares to copy pipes</span>
                 </li>
               </ul>
             </div>
 
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold">Moves Made</h3>
-                <span className="text-3xl font-mono bg-accent/30 px-4 py-1 rounded-md">
-                  {moveCount}
+            <div className="border-t pt-5">
+              <div className="mb-5 flex items-end justify-between">
+                <div>
+                  <span className="block font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Inference</span>
+                  <h3 className="mt-1 text-base tracking-normal">Moves made</h3>
+                </div>
+                <span className="font-mono text-4xl font-medium leading-none text-primary">
+                  {String(moveCount).padStart(2, "0")}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -399,12 +420,12 @@ export default function BuildableBoard() {
                 </Button>
               </div>
               {solverStatus === "paused" && (
-                <p className="text-xs text-muted-foreground mt-3 text-center handwritten">
+                <p className="mt-3 text-center text-xs text-muted-foreground">
                   Paused — continue solving or reset to the starting board.
                 </p>
               )}
               {solverStatus === "solved" && (
-                <p className="text-xs text-primary mt-3 text-center handwritten">
+                <p className="mt-3 text-center text-xs font-medium text-primary">
                   Solved in {moveCount} moves!
                 </p>
               )}
@@ -416,7 +437,7 @@ export default function BuildableBoard() {
                   <p className="text-sm font-semibold text-destructive">
                     This puzzle is unsolvable
                   </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground handwritten">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     The solver stopped after {MAX_SOLVER_MOVES} moves.
                     <br />
                     Edit the board or reset it to try again.
@@ -424,7 +445,7 @@ export default function BuildableBoard() {
                 </div>
               )}
               {!noEmpties && (
-                <p className="text-xs text-muted-foreground mt-3 text-center handwritten">
+                <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
                   Fill the board to start solving!
                 </p>
               )}

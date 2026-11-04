@@ -49,7 +49,7 @@ export default function DraggablePipe({
   return (
     <div
       ref={ref}
-      className="h-full w-full"
+      className={`h-full w-full ${isLocked ? "cursor-not-allowed" : "cursor-pointer"}`}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
@@ -61,6 +61,7 @@ export default function DraggablePipe({
         style={{
           transform: `rotate(${rotations * 90}deg)`,
           opacity: isDragging ? 0.5 : 1,
+          filter: "invert(40%) sepia(24%) saturate(1773%) hue-rotate(128deg) brightness(84%)",
         }}
         width={100}
         height={100}

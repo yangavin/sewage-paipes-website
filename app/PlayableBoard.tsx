@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Dices, Grid3X3, Lightbulb, RotateCcw } from "lucide-react";
 
 type PuzzleStatus = "playing" | "won" | "revealed";
 
@@ -116,17 +117,23 @@ export default function PlayableBoard() {
   };
 
   return (
-    <div className="w-full">
+    <div className="relative z-10 w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-3 shadow-2xl shadow-black/20 sm:p-6">
       {/* Controls Section */}
-      <div className="bg-card rounded-xl p-4 sm:p-6 mb-8 shadow-sm border border-border">
-        <div className="flex flex-col md:flex-row justify-center items-center gap-6">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-[#f4f1e8] p-4 text-foreground shadow-xl sm:p-5">
+        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
           <div className="flex w-full sm:w-auto items-center justify-center gap-3">
-            <span className="text-sm font-medium text-muted-foreground">Canvas Size:</span>
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Grid3X3 className="size-4" />
+            </span>
+            <div className="mr-1">
+              <span className="block font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Board</span>
+              <span className="block text-sm font-semibold">Grid size</span>
+            </div>
             <Select
               value={String(n)}
               onValueChange={(value) => setN(parseInt(value))}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-28 border-border bg-white">
                 <SelectValue placeholder="Select size" />
               </SelectTrigger>
               <SelectContent className="max-h-[200px]">
@@ -146,7 +153,7 @@ export default function PlayableBoard() {
               disabled={isLoading}
               className="w-full gap-2"
             >
-              <span>🎲</span>
+              <Dices />
               New Puzzle
             </Button>
             <Button 
@@ -155,7 +162,7 @@ export default function PlayableBoard() {
               disabled={isLoading}
               className="w-full gap-2"
             >
-              <span>🔄</span>
+              <RotateCcw />
               Reset
             </Button>
             <Button
@@ -164,7 +171,7 @@ export default function PlayableBoard() {
               disabled={isLoading || puzzleStatus !== "playing"}
               className="col-span-2 w-full gap-2 sm:col-span-1"
             >
-              <span>💡</span>
+              <Lightbulb />
               Show Solution
             </Button>
           </div>
@@ -173,32 +180,33 @@ export default function PlayableBoard() {
 
       {/* Puzzle Board */}
       {isLoading ? (
-        <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
+        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
           <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-accent animate-ping"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 animate-ping rounded-full border-4 border-secondary/50"></div>
+            <div className="absolute inset-0 animate-spin rounded-full border-4 border-secondary border-t-transparent"></div>
           </div>
-          <p className="text-muted-foreground handwritten text-lg">Generating your puzzle...</p>
+          <p className="font-mono text-xs uppercase tracking-[0.12em] text-white/60">Generating network...</p>
         </div>
       ) : !solution_str || currentState.length !== n * n ? (
         <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
-          <span className="text-6xl">⚠️</span>
-          <p className="text-muted-foreground text-center">
+          <span className="text-5xl">⚠</span>
+          <p className="text-center text-white/60">
             No valid solution found. Try a different board size.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col items-center">
-          <div
-            className={`inline-grid bg-card rounded-lg shadow-lg border-2 overflow-hidden transition-all duration-300 ${
+        <div className="flex flex-col items-center py-3 sm:py-6">
+          <div className="w-full max-w-[648px] rounded-2xl bg-[#071a19] p-2 shadow-2xl sm:p-3">
+            <div
+            className={`inline-grid w-full overflow-hidden rounded-xl border-2 bg-card transition-all duration-300 ${
               puzzleStatus === "won"
-                ? "border-primary ring-4 ring-secondary"
-                : "border-border"
+                ? "border-secondary ring-4 ring-secondary/20"
+                : "border-white/15"
             }`}
             style={{
               gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`,
-              maxWidth: '600px',
+              maxWidth: '620px',
               width: '100%',
               aspectRatio: '1',
             }}
@@ -206,26 +214,36 @@ export default function PlayableBoard() {
             {Array.from({ length: n * n }).map((_, index) => (
               <div
                 key={index}
-                className={`border border-grid-line transition-all duration-200 relative group ${
+                className={`group relative border border-[#d6d3c8] transition-all duration-200 ${
                   puzzleStatus === "playing"
-                    ? "bg-background cursor-pointer hover:bg-accent/20"
+                    ? "cursor-pointer bg-[#f7f5ed] hover:bg-secondary/25"
                     : "bg-muted/50 cursor-not-allowed"
                 }`}
                 onClick={() => handlePipeClick(index)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handlePipeClick(index);
+                  }
+                }}
+                role="button"
+                tabIndex={puzzleStatus === "playing" ? 0 : -1}
+                aria-label={`Rotate pipe at row ${Math.floor(index / n) + 1}, column ${(index % n) + 1}`}
                 aria-disabled={puzzleStatus !== "playing"}
               >
                 <div
                   className={`absolute inset-0 z-20 pointer-events-none transition-opacity ${
                     puzzleStatus === "playing"
-                      ? "bg-accent/10 opacity-0 group-hover:opacity-100"
+                      ? "bg-primary/10 opacity-0 group-hover:opacity-100"
                       : "bg-black/10 opacity-100"
                   }`}
                 ></div>
                 <Image
                   src={`/type${getPipeType(currentState[index])}.svg`}
-                  className="w-full h-full transition-transform duration-200 relative z-10"
+                  className="relative z-10 h-full w-full transition-transform duration-200"
                   style={{
                     transform: `rotate(${rotationCounts[index] * 90}deg)`,
+                    filter: "invert(40%) sepia(24%) saturate(1773%) hue-rotate(128deg) brightness(84%)",
                   }}
                   alt={`Pipe type ${getPipeType(currentState[index])}`}
                   width={100}
@@ -233,11 +251,12 @@ export default function PlayableBoard() {
                 />
               </div>
             ))}
+            </div>
           </div>
 
           {puzzleStatus === "won" && (
             <div
-              className="bloom-in mt-6 w-full max-w-xl rounded-xl border-2 border-primary bg-secondary px-5 py-4 text-center shadow-sm"
+              className="bloom-in mt-6 w-full max-w-xl rounded-xl border border-secondary/50 bg-secondary px-5 py-4 text-center text-foreground shadow-lg"
               role="status"
               aria-live="polite"
             >
@@ -249,7 +268,7 @@ export default function PlayableBoard() {
                   <p className="font-semibold text-foreground">
                     Puzzle solved!
                   </p>
-                  <p className="handwritten text-lg text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Every pipe is connected. Nicely done!
                   </p>
                 </div>
@@ -259,11 +278,11 @@ export default function PlayableBoard() {
 
           {puzzleStatus === "revealed" && (
             <div
-              className="mt-6 w-full max-w-xl rounded-xl border border-border bg-accent/30 px-5 py-4 text-center shadow-sm"
+              className="mt-6 w-full max-w-xl rounded-xl border border-white/15 bg-white/10 px-5 py-4 text-center shadow-sm"
               role="status"
             >
-              <p className="font-medium text-foreground">💡 Solution revealed</p>
-              <p className="handwritten text-lg text-muted-foreground">
+              <p className="font-medium text-white">Solution revealed</p>
+              <p className="text-sm text-white/60">
                 Press Reset to try this puzzle yourself.
               </p>
             </div>
@@ -273,8 +292,8 @@ export default function PlayableBoard() {
       
       {/* Helpful hint */}
       {!isLoading && solution_str && currentState.length === n * n && (
-        <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground handwritten">
+        <div className="mt-4 pb-2 text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/45">
             {puzzleStatus === "playing"
               ? "Click any pipe to rotate it. Connect them all!"
               : "Reset or start a new puzzle to play again."}

@@ -7,6 +7,7 @@ interface DroppableBoxProp {
   isLocked: boolean;
   onDrop: (pipe: Openings) => void;
   onClick?: () => void;
+  label: string;
 }
 
 export default function DroppableBox({
@@ -14,6 +15,7 @@ export default function DroppableBox({
   isLocked,
   onDrop,
   onClick,
+  label,
 }: DroppableBoxProp) {
   const [{ isOver }, drop] = useDrop(
     () => ({
@@ -36,14 +38,14 @@ export default function DroppableBox({
   const bgColor = isLocked
     ? "bg-muted/50"
     : isOver
-    ? "bg-accent/40"
-    : "bg-background";
+    ? "bg-secondary/45"
+    : "bg-[#f7f5ed]";
 
   return (
     <div
-      className={`border border-grid-line ${bgColor} ${
+      className={`border border-[#d6d3c8] ${bgColor} ${
         !isLocked
-          ? "cursor-pointer hover:bg-accent/20"
+          ? "cursor-pointer hover:bg-primary/5"
           : "cursor-not-allowed"
       } transition-all duration-200 relative group`}
       ref={ref}
@@ -53,6 +55,15 @@ export default function DroppableBox({
           onClick?.();
         }
       }}
+      onKeyDown={(event) => {
+        if (!isLocked && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
+      role="button"
+      tabIndex={isLocked ? -1 : 0}
+      aria-label={label}
       aria-disabled={isLocked}
     >
       {children}
